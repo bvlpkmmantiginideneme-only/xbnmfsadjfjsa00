@@ -1,5 +1,5 @@
 // sayfalar/1.js
-// IO7R Veritabanı Sayfa - Eksiksiz Sorgulaması
+// IO7R Veritabani Sayfa - Eksiksiz Sorgulamasi
 // TC, AD, SOYAD - DM Fallback Sistemi
 
 const {
@@ -18,22 +18,22 @@ module.exports = {
   },
 
   getPageName: async function() {
-    return '🔍 IO7R Sorgulaması';
+    return 'IO7R Sorgulamasi';
   },
 
   getPageDescription: async function() {
-    return 'Kimlik numarası ile kişi bilgisi sorgulaması yapabilirsiniz';
+    return 'Kimlik numarasi ile kisi bilgisi sorgulamasi yapabilirsiniz';
   },
 
   getPageContent: async function(userId) {
     try {
-      return '**📋 Mevcut Kolon Bilgisi:**\n' +
-        '- 🆔 TC Kimlik Numarası\n' +
-        '- 👤 Ad\n' +
-        '- 👤 Soyadı\n\n' +
-        '**💡 Sorgula butonuna tıklayarak modalı açın ve TC kimlik numarası girin. ';
+      return '**Mevcut Kolon Bilgisi:**\n' +
+        '- TC Kimlik Numarasi\n' +
+        '- Ad\n' +
+        '- Soyadi\n\n' +
+        '**Sorgula butonuna tiklayarak modali acin ve TC kimlik numarasi girin. ';
     } catch (e) {
-      return '❌ İçerik yüklenirken hata oluştu.';
+      return 'Icerik yuklenirken hata olustu. ';
     }
   },
 
@@ -41,13 +41,13 @@ module.exports = {
     try {
       const modal = new ModalBuilder()
         .setCustomId('sayfa_1_sorgu_modal')
-        .setTitle('🔍 IO7R Sorgu Modal');
+        .setTitle('IO7R Sorgu Modal');
 
       const tcInput = new TextInputBuilder()
         .setCustomId('io7r_tc')
-        .setLabel('TC Kimlik Numarası')
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder('11 haneli TC numarası')
+        .setLabel('TC Kimlik Numarasi')
+        .setStyle(TextInputStyle. Short)
+        .setPlaceholder('11 haneli TC numarasi')
         .setRequired(true);
 
       const tcRow = new ActionRowBuilder().addComponents(tcInput);
@@ -55,7 +55,7 @@ module.exports = {
 
       return modal;
     } catch (e) {
-      console.error('❌ Modal oluşturma hatası:', e && e.message);
+      console.error('[ERROR] Modal olusturma hatasi:', e && e.message);
       return null;
     }
   },
@@ -71,8 +71,8 @@ module.exports = {
       } catch (_) {
         const embed = new EmbedBuilder()
           .setColor('#ffaa00')
-          .setTitle('⚠️ Geçersiz İnput')
-          .setDescription('Lütfen TC kimlik numarası girin.')
+          .setTitle('Gecersiz Input')
+          .setDescription('Lutfen TC kimlik numarasi girin.')
           .setTimestamp();
 
         await safeReply(interaction, { embeds: [embed], ephemeral: true });
@@ -83,17 +83,17 @@ module.exports = {
       if (! tc || tc.length !== 11 || !/^\d+$/.test(tc)) {
         const embed = new EmbedBuilder()
           .setColor('#ffaa00')
-          .setTitle('⚠️ Geçersiz TC')
-          .setDescription('TC kimlik numarası 11 haneli rakam olmalıdır.')
+          .setTitle('Gecersiz TC')
+          .setDescription('TC kimlik numarasi 11 haneli rakam olmalidir.')
           .setTimestamp();
 
-        await safeReply(interaction, { embeds:  [embed], ephemeral: true });
+        await safeReply(interaction, { embeds: [embed], ephemeral: true });
         return;
       }
 
-      await LogYonetim.info('sorgu_basladi', '🟢 IO7R sorgusu başladı', {
-        klasor:  'database',
-        key: 'sorgu',
+      await LogYonetim.info('sorgu_basladi', 'IO7R sorgusu basladi', {
+        klasor: 'database',
+        key:  'sorgu',
         kullaniciID: userId,
         tc:  tc. substring(0, 3) + '***',
         traceID: traceId
@@ -114,7 +114,7 @@ module.exports = {
 
         const duration = Date.now() - start;
 
-        await LogYonetim.sorguBasarili(userId, 'io7r', duration, results && results. length ?  results. length : 0, state. guildId, traceId);
+        await LogYonetim.sorguBasarili(userId, 'io7r', duration, results && results. length ?  results. length : 0, state.guildId, traceId);
 
       } catch (dbError) {
         const duration = Date.now() - start;
@@ -123,26 +123,26 @@ module.exports = {
 
         const embed = new EmbedBuilder()
           .setColor('#ff6b6b')
-          .setTitle('❌ Veritabanı Hatası')
-          .setDescription('Sorgu sırasında veritabanı hatası oluştu.  Lütfen daha sonra tekrar deneyiniz.')
+          .setTitle('Veritabani Hatasi')
+          .setDescription('Sorgu sirasinda veritabani hatasi olustu.  Lutfen daha sonra tekrar deneyiniz.')
           .addFields(
-            { name: '📝 Hata Detayı', value: `\`\`\`${dbError && (dbError.message || 'Bilinmeyen hata')}\`\`\``, inline: false }
+            { name:  'Hata Detayi', value: `\`\`\`${dbError && (dbError.message || 'Bilinmeyen hata')}\`\`\``, inline: false }
           )
           .setTimestamp();
 
-        await safeReply(interaction, { embeds:  [embed], ephemeral: true });
+        await safeReply(interaction, { embeds: [embed], ephemeral: true });
         return;
       }
 
       if (! results || results.length === 0) {
         const embed = new EmbedBuilder()
           .setColor('#ffaa00')
-          .setTitle('🔍 Sonuç Bulunamadı')
-          .setDescription(`TC Kimlik Numarası: **${tc}** ile eşleşen kayıt bulunamadı.`)
+          .setTitle('Sonuc Bulunamadi')
+          .setDescription(`TC Kimlik Numarasi:  **${tc}** ile eslesen kayit bulunamadi.`)
           .setTimestamp();
 
         try {
-          await safeReply(interaction, { embeds: [embed], ephemeral: true });
+          await safeReply(interaction, { embeds:  [embed], ephemeral: true });
         } catch (_) {}
 
         return;
@@ -152,14 +152,14 @@ module.exports = {
 
       const embed = new EmbedBuilder()
         .setColor('#4a9eff')
-        .setTitle('✅ Sorgu Sonucu')
-        .setDescription('IO7R Veritabanı - Kişi Bilgisi')
+        .setTitle('Sorgu Sonucu')
+        .setDescription('IO7R Veritabani - Kisi Bilgisi')
         .addFields(
-          { name: '🆔 TC Kimlik Numarası', value: `\`\`\`${kayit.tc || 'N/A'}\`\`\``, inline: true },
-          { name: '👤 Ad', value: `\`\`\`${kayit.ad || 'N/A'}\`\`\``, inline: true },
-          { name: '👤 Soyadı', value: `\`\`\`${kayit.soyad || 'N/A'}\`\`\``, inline: true }
+          { name: 'TC Kimlik Numarasi', value:  `\`\`\`${kayit.tc || 'N/A'}\`\`\``, inline: true },
+          { name: 'Ad', value: `\`\`\`${kayit.ad || 'N/A'}\`\`\``, inline: true },
+          { name: 'Soyadi', value: `\`\`\`${kayit.soyad || 'N/A'}\`\`\``, inline: true }
         )
-        .setFooter({ text: `📅 Sorgu Zamanı: ${new Date().toLocaleTimeString('tr-TR')}` })
+        .setFooter({ text: `Sorgu Zamani: ${new Date().toLocaleTimeString('tr-TR')}` })
         .setTimestamp();
 
       try {
@@ -169,47 +169,48 @@ module.exports = {
 
         const confirmEmbed = new EmbedBuilder()
           .setColor('#4a9eff')
-          .setTitle('✅ Sonuç Gönderildi')
-          .setDescription('Sorgu sonucu DM olarak gönderilmiştir.')
+          .setTitle('Sonuc Gonderildi')
+          .setDescription('Sorgu sonucu DM olarak gonderilmistir.')
           .setTimestamp();
 
-        await safeReply(interaction, { embeds:  [confirmEmbed], ephemeral: true });
+        await safeReply(interaction, { embeds: [confirmEmbed], ephemeral: true });
 
       } catch (dmError) {
         await LogYonetim.dmGonderimHatasi(userId, 'dmKapali', state.guildId, traceId);
 
         const dmErrorEmbed = new EmbedBuilder()
           .setColor('#ffaa00')
-          .setTitle('⚠️ DM Gönderilemedi')
-          .setDescription('Özel mesaj alabilmesi için DM\'lerinizi açmış olmanız gerekmektedir.  Sonuç aşağıda gösterilmiştir: ')
+          .setTitle('DM Gonderilemedi')
+          .setDescription('Ozel mesaj alabilmesi icin DMlerinizi acmis olmaniz gerekmektedir.  Sonuc asagida gosterilmistir: ')
           .addFields(
-            { name: '🆔 TC Kimlik Numarası', value: `\`\`\`${kayit.tc || 'N/A'}\`\`\``, inline: true },
-            { name:  '👤 Ad', value: `\`\`\`${kayit.ad || 'N/A'}\`\`\``, inline: true },
-            { name: '👤 Soyadı', value: `\`\`\`${kayit.soyad || 'N/A'}\`\`\``, inline: true }
+            { name: 'TC Kimlik Numarasi', value:  `\`\`\`${kayit.tc || 'N/A'}\`\`\``, inline: true },
+            { name:  'Ad', value: `\`\`\`${kayit.ad || 'N/A'}\`\`\``, inline: true },
+            { name: 'Soyadi', value:  `\`\`\`${kayit.soyad || 'N/A'}\`\`\``, inline: true }
           )
-          .setFooter({ text: `📅 Sorgu Zamanı: ${new Date().toLocaleTimeString('tr-TR')}` })
+          .setFooter({ text: `Sorgu Zamani: ${new Date().toLocaleTimeString('tr-TR')}` })
           .setTimestamp();
 
-        await safeReply(interaction, { embeds: [dmErrorEmbed], ephemeral: true });
+        await safeReply(interaction, { embeds:  [dmErrorEmbed], ephemeral:  true });
       }
 
     } catch (e) {
-      await LogYonetim.error('sayfa1_execute_hata', '❌ Sayfa 1 execute hatası', {
+      console.error('[ERROR] sayfa1_execute_hata:', e && e.message);
+      await LogYonetim. error('sayfa1_execute_hata', 'Sayfa 1 execute hatasi', {
         klasor: 'panel',
         key: 'sayfa1',
-        kullaniciID: userId,
+        kullaniciID:  userId,
         hata: e && (e.stack || e.message),
         traceID: traceId
       });
 
       const embed = new EmbedBuilder()
         .setColor('#ff0000')
-        .setTitle('❌ Hata')
-        .setDescription('Modal işlenirken hata oluştu.')
+        .setTitle('Hata')
+        .setDescription('Modal islenirken hata olustu.')
         .setTimestamp();
 
       try {
-        await safeReply(interaction, { embeds: [embed], ephemeral: true });
+        await safeReply(interaction, { embeds:  [embed], ephemeral: true });
       } catch (_) {}
     }
   }
