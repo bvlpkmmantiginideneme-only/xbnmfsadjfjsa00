@@ -1,6 +1,6 @@
 // log_yonetim.js
 // Enterprise Log Yönetim Sistemi
-// Rotasyon, auto-cleanup, state repair, emoji UI
+// Rotasyon, auto-cleanup, state repair, emoji UI, sunucu meta desteği
 
 const fsp = require('fs').promises;
 const fs = require('fs');
@@ -12,13 +12,12 @@ const LOGLAR_DM = path.join(LOGLAR_ROOT, 'dm');
 const LOGLAR_BOT_GENEL = path.join(LOGLAR_ROOT, 'bot_genel');
 const LOGLAR_DATABASE = path.join(LOGLAR_ROOT, 'database');
 const LOGLAR_PANEL = path.join(LOGLAR_ROOT, 'panel');
-const LOGLAR_SISTEMI = path.join(LOGLAR_ROOT, 'log_sistemi.  jsonl');
+const LOGLAR_SISTEMI = path.join(LOGLAR_ROOT, 'log_sistemi. jsonl');
 const LOGLAR_ARSIV = path.join(LOGLAR_ROOT, 'log_kalici_arsiv');
 const DEFAULT_CONFIG = path.join(LOGLAR_ROOT, 'default_config.json');
 
-// ✅ DYNAMIK SILME SÜRESİ - ENV'DEN
-const KALICI_LOG_SILME_SANIYE = Number(process.env.KALICI_LOG_DOSYA_SILME_SANIYE || 2592000); // Varsayılan 1 ay
-const LOG_BOYUTU_SINIRI = 5 * 1024 * 1024 * 1024; // 5GB
+const KALICI_LOG_SILME_SANIYE = Number(process.env. KALICI_LOG_DOSYA_SILME_SANIYE || 2592000);
+const LOG_BOYUTU_SINIRI = 5 * 1024 * 1024 * 1024;
 
 class LogYonetim {
   static async ensureLogDirs() {
@@ -33,10 +32,10 @@ class LogYonetim {
       ];
 
       for (const dir of dirs) {
-        await fsp.mkdir(dir, { recursive: true });
+        await fsp. mkdir(dir, { recursive: true });
       }
 
-      if (! fs.existsSync(LOGLAR_SISTEMI)) {
+      if (!fs.existsSync(LOGLAR_SISTEMI)) {
         fs.writeFileSync(LOGLAR_SISTEMI, '', 'utf8');
       }
 
@@ -51,17 +50,23 @@ class LogYonetim {
         fs.writeFileSync(DEFAULT_CONFIG, JSON.stringify(config, null, 2), 'utf8');
       }
     } catch (e) {
-      console.error('❌ Log dizini oluşturma hatası:', e && e.message);
+      console.error('[ERROR] ensureLogDirs', e && e.message);
     }
   }
 
-  /**
-   * ✅ LOG ROTASYONU - 5GB
-   * @private
-   */
+  static _consoleLog(severity, event, message) {
+    if (severity === 'WARN') {
+      console. warn('[WARN]', event, message ?  String(message).slice(0, 200) : '');
+    } else if (severity === 'ERROR') {
+      console.error('[ERROR]', event, message ? String(message).slice(0, 200) : '');
+    } else if (severity === 'CRITICAL') {
+      console.error('[CRITICAL]', event, message ? String(message).slice(0, 200) : '');
+    }
+  }
+
   static async _checkLogRotation() {
     try {
-      await LogYonetim.ensureLogDirs();
+      await LogYonetim. ensureLogDirs();
 
       if (!fs.existsSync(LOGLAR_SISTEMI)) {
         return;
@@ -72,18 +77,18 @@ class LogYonetim {
 
       if (boyut > LOG_BOYUTU_SINIRI) {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const arsivAdi = `log_sistemi_${timestamp}.jsonl`;
+        const arsivAdi = `log_sistemi_${timestamp}. jsonl`;
         const arsivPath = path.join(LOGLAR_ARSIV, arsivAdi);
 
         await fsp.rename(LOGLAR_SISTEMI, arsivPath);
         fs.writeFileSync(LOGLAR_SISTEMI, '', 'utf8');
 
         try {
-          const config = JSON. parse(fs.readFileSync(DEFAULT_CONFIG, 'utf8'));
+          const config = JSON.parse(fs.readFileSync(DEFAULT_CONFIG, 'utf8'));
           config.rotasyonTarihler.push({
             tarih: new Date().toISOString(),
             dosya: arsivAdi,
-            boyut: boyut,
+            boyut:  boyut,
             silinecekTarih: new Date(Date.now() + KALICI_LOG_SILME_SANIYE * 1000).toISOString()
           });
           fs.writeFileSync(DEFAULT_CONFIG, JSON.stringify(config, null, 2), 'utf8');
@@ -92,15 +97,10 @@ class LogYonetim {
         console.log(`📦 LOG ROTASYONU: ${arsivAdi} (${(boyut / 1024 / 1024 / 1024).toFixed(2)}GB)`);
       }
     } catch (e) {
-      console.error('❌ Rotasyon hatası:', e && e.message);
+      console.error('[ERROR] _checkLogRotation', e && e.message);
     }
   }
 
-  /**
-   * ✅ AUTO-CLEANUP - ESKI LOGLAR SİLİNİR
-   * Bot açıldığında çalışır
-   * @private
-   */
   static async _cleanupOldLogs() {
     try {
       await LogYonetim. ensureLogDirs();
@@ -113,7 +113,7 @@ class LogYonetim {
       for (const file of files) {
         const filePath = path.join(LOGLAR_ARSIV, file);
         const stats = fs.statSync(filePath);
-        const age = now - stats.mtimeMs;
+        const age = now - stats. mtimeMs;
 
         if (age > KALICI_LOG_SILME_SANIYE * 1000) {
           await fsp.unlink(filePath);
@@ -129,34 +129,28 @@ class LogYonetim {
 
       return { deletedCount, deletedSize };
     } catch (e) {
-      console.error('❌ Cleanup hatası:', e && e.message);
-      return { deletedCount: 0, deletedSize:  0 };
+      console. error('[ERROR] _cleanupOldLogs', e && e.message);
+      return { deletedCount: 0, deletedSize: 0 };
     }
   }
 
-  /**
-   * ✅ STATE DOSYASI AKILLI RECOVERY
-   * @private
-   */
   static async _repairStateFile(stateFile) {
     try {
       if (fs.existsSync(stateFile)) {
         const data = fs.readFileSync(stateFile, 'utf8');
         JSON.parse(data);
-        return true; // Dosya sağlam
+        return true;
       }
       return false;
     } catch (e) {
       try {
-        // Bozuk dosyayı sil
         await fsp.unlink(stateFile);
         
-        // Config'e kaydet
         try {
-          const config = JSON. parse(fs.readFileSync(DEFAULT_CONFIG, 'utf8'));
-          config.stateRepairLog.push({
+          const config = JSON.parse(fs.readFileSync(DEFAULT_CONFIG, 'utf8'));
+          config.stateRepairLog. push({
             tarih: new Date().toISOString(),
-            dosya: path.basename(stateFile),
+            dosya:  path.basename(stateFile),
             neden: 'JSON parse hatası - otomatik silinmişti',
             action: 'DELETED'
           });
@@ -170,9 +164,49 @@ class LogYonetim {
     }
   }
 
-  /**
-   * Log yazma
-   */
+  static _getSunucuMetaPath(guildId) {
+    return path.join(LOGLAR_SUNUCULAR, `${guildId}. meta.json`);
+  }
+
+  static _readSunucuMeta(guildId) {
+    try {
+      const metaPath = LogYonetim._getSunucuMetaPath(guildId);
+      if (fs.existsSync(metaPath)) {
+        return JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+      }
+    } catch (_) {}
+    return { log_kanali: null, olusturma: new Date().toISOString() };
+  }
+
+  static _writeSunucuMeta(guildId, meta) {
+    try {
+      const metaPath = LogYonetim._getSunucuMetaPath(guildId);
+      fs.writeFileSync(metaPath, JSON. stringify(meta, null, 2), 'utf8');
+      return true;
+    } catch (e) {
+      console.warn('[WARN] _writeSunucuMeta', e && e.message);
+      return false;
+    }
+  }
+
+  static async setSunucuLogKanali(guildId, kanalId) {
+    try {
+      const meta = LogYonetim._readSunucuMeta(guildId);
+      meta.log_kanali = kanalId || null;
+      meta.guncelleme = new Date().toISOString();
+      LogYonetim._writeSunucuMeta(guildId, meta);
+      return true;
+    } catch (e) {
+      console.warn('[WARN] setSunucuLogKanali', e && e.message);
+      return false;
+    }
+  }
+
+  static getSunucuLogKanali(guildId) {
+    const meta = LogYonetim._readSunucuMeta(guildId);
+    return meta. log_kanali || null;
+  }
+
   static async writeLog(data) {
     try {
       await LogYonetim.ensureLogDirs();
@@ -187,42 +221,19 @@ class LogYonetim {
 
       const line = JSON.stringify(entry) + '\n';
       await fsp.appendFile(LOGLAR_SISTEMI, line, 'utf8');
+
+      LogYonetim._consoleLog(entry.severity, data. tur || data.key, data.mesaj);
     } catch (e) {
-      console.error('❌ Log yazma hatası:', e && e. message);
+      console. error('[ERROR] writeLog', e && e.message);
     }
   }
 
   static writeLogSync(data) {
     try {
       if (!fs.existsSync(LOGLAR_ROOT)) {
-        fs.mkdirSync(LOGLAR_ROOT, { recursive: true });
+        fs.mkdirSync(LOGLAR_ROOT, { recursive:  true });
       }
 
-      const entry = {
-        timestamp: new Date().toISOString(),
-        severity: data.severity || 'INFO',
-        traceID: data.traceID || null,
-        ... data
-      };
-
-      const line = JSON.stringify(entry) + '\n';
-      fs.appendFileSync(LOGLAR_SISTEMI, line, 'utf8');
-    } catch (e) {
-      console.error('❌ Sync log yazma hatası:', e && e.message);
-    }
-  }
-
-  static async writeRegularLog(klasor, key, data) {
-    try {
-      await LogYonetim.ensureLogDirs();
-      
-      let logDir = LOGLAR_BOT_GENEL;
-      if (klasor === 'sunucular') logDir = LOGLAR_SUNUCULAR;
-      else if (klasor === 'dm') logDir = LOGLAR_DM;
-      else if (klasor === 'database') logDir = LOGLAR_DATABASE;
-      else if (klasor === 'panel') logDir = LOGLAR_PANEL;
-
-      const filePath = path.join(logDir, `${key}.jsonl`);
       const entry = {
         timestamp: new Date().toISOString(),
         severity: data.severity || 'INFO',
@@ -231,13 +242,50 @@ class LogYonetim {
       };
 
       const line = JSON.stringify(entry) + '\n';
-      await fsp.appendFile(filePath, line, 'utf8');
+      fs.appendFileSync(LOGLAR_SISTEMI, line, 'utf8');
+
+      LogYonetim._consoleLog(entry.severity, data.tur || data.key, data.mesaj);
     } catch (e) {
-      console.error('❌ Regular log hatası:', e && e.message);
+      console.error('[ERROR] writeLogSync', e && e.message);
     }
   }
 
-  // ==================== LOG FONKSİYONLARI ====================
+  static async writeRegularLog(klasor, key, data) {
+    try {
+      await LogYonetim. ensureLogDirs();
+      
+      let logDir = LOGLAR_BOT_GENEL;
+      let fileName = `${key}.jsonl`;
+
+      if (klasor === 'sunucular') {
+        logDir = LOGLAR_SUNUCULAR;
+        if (data.guildID) {
+          fileName = `${data.guildID}.jsonl`;
+        }
+      } else if (klasor === 'dm') {
+        logDir = LOGLAR_DM;
+      } else if (klasor === 'database') {
+        logDir = LOGLAR_DATABASE;
+      } else if (klasor === 'panel') {
+        logDir = LOGLAR_PANEL;
+      }
+
+      const filePath = path.join(logDir, fileName);
+      const entry = {
+        timestamp: new Date().toISOString(),
+        severity: data. severity || 'INFO',
+        traceID: data.traceID || null,
+        ...data
+      };
+
+      const line = JSON.stringify(entry) + '\n';
+      await fsp.appendFile(filePath, line, 'utf8');
+
+      LogYonetim._consoleLog(entry. severity, data. tur || key, data.mesaj);
+    } catch (e) {
+      console.error('[ERROR] writeRegularLog', e && e.message);
+    }
+  }
 
   static async debug(event, message, opts = {}) {
     const entry = {
@@ -245,7 +293,7 @@ class LogYonetim {
       severity: 'DEBUG',
       emoji: '🔍',
       mesaj: message,
-      traceID: opts.traceID || null,
+      traceID: opts. traceID || null,
       ... opts
     };
 
@@ -261,13 +309,13 @@ class LogYonetim {
       severity: 'INFO',
       emoji: 'ℹ️',
       mesaj: message,
-      traceID: opts.traceID || null,
+      traceID:  opts.traceID || null,
       ...opts
     };
 
     await LogYonetim.writeLog(entry);
-    if (opts.klasor) {
-      await LogYonetim.writeRegularLog(opts.klasor, opts. key || 'info', entry);
+    if (opts. klasor) {
+      await LogYonetim.writeRegularLog(opts. klasor, opts. key || 'info', entry);
     }
   }
 
@@ -275,10 +323,10 @@ class LogYonetim {
     const entry = {
       tur:  event,
       severity: 'WARN',
-      emoji: '⚠️',
+      emoji:  '⚠️',
       mesaj: message,
       traceID: opts.traceID || null,
-      ...opts
+      ... opts
     };
 
     await LogYonetim.writeLog(entry);
@@ -290,58 +338,55 @@ class LogYonetim {
   static async error(event, message, opts = {}) {
     const entry = {
       tur: event,
-      severity: 'ERROR',
+      severity:  'ERROR',
       emoji: '❌',
       mesaj: message,
-      traceID: opts.traceID || null,
-      ... opts
+      traceID:  opts.traceID || null,
+      ...opts
     };
 
     await LogYonetim.writeLog(entry);
-    if (opts.klasor) {
-      await LogYonetim.writeRegularLog(opts.klasor, opts.key || 'error', entry);
+    if (opts. klasor) {
+      await LogYonetim.writeRegularLog(opts. klasor, opts. key || 'error', entry);
     }
   }
 
   static async critical(event, message, opts = {}) {
     const entry = {
-      tur: event,
+      tur:  event,
       severity: 'CRITICAL',
-      emoji: '🔴',
-      mesaj: message,
+      emoji:  '🔴',
+      mesaj:  message,
       traceID: opts. traceID || null,
       alarm: true,
       ...opts
     };
 
-    LogYonetim.writeLogSync(entry);
+    LogYonetim. writeLogSync(entry);
 
-    if (opts.klasor) {
+    if (opts. klasor) {
       try {
-        await LogYonetim.writeRegularLog(opts.klasor, 'critical', entry);
+        await LogYonetim. writeRegularLog(opts.klasor, 'critical', entry);
       } catch (_) {}
     }
   }
 
-  // ==================== SİSTEM İŞLEMLERİ ====================
-
   static async sistemBasladi() {
-    LogYonetim.writeLogSync({
+    LogYonetim. writeLogSync({
       tur: 'sistem_basladi',
       emoji: '🟢',
       severity: 'INFO',
-      mesaj: 'Bot sistemi başlatıldı'
+      mesaj:  'Bot sistemi başlatıldı'
     });
 
     try {
-      await LogYonetim.writeRegularLog('bot_genel', 'sistem', {
+      await LogYonetim. writeRegularLog('bot_genel', 'sistem', {
         tur: 'sistem_basladi',
         emoji: '🟢',
-        severity:  'INFO',
-        mesaj: 'Bot hazır'
+        severity: 'INFO',
+        mesaj:  'Bot hazır'
       });
 
-      // ✅ BOT AÇILIŞINDA AUTO-CLEANUP
       await LogYonetim._cleanupOldLogs();
     } catch (_) {}
   }
@@ -359,7 +404,7 @@ class LogYonetim {
         tur: 'sistem_kapandi',
         emoji: '🔴',
         severity: 'INFO',
-        mesaj: 'Bot kapatıldı'
+        mesaj:  'Bot kapatıldı'
       });
     } catch (_) {}
   }
@@ -367,8 +412,8 @@ class LogYonetim {
   static async sistemHatasi(mesaj, seviye = 'ERROR', traceId = null) {
     LogYonetim.writeLogSync({
       tur: 'sistem_hatasi',
-      emoji:  '🚨',
-      severity: seviye,
+      emoji: '🚨',
+      severity:  seviye,
       mesaj: mesaj. substring(0, 300),
       traceID: traceId
     });
@@ -379,7 +424,7 @@ class LogYonetim {
         emoji: '🚨',
         severity: seviye,
         mesaj: mesaj.substring(0, 300),
-        traceID: traceId
+        traceID:  traceId
       });
     } catch (_) {}
   }
@@ -393,21 +438,21 @@ class LogYonetim {
       degisenleri,
       eklenenler,
       silenenler,
-      traceID:  traceId,
+      traceID: traceId,
       mesaj: `Komutlar kaydedildi - Toplam: ${toplamKomut}, Değişen: ${degisenleri}, Eklenen: ${eklenenler}, Silinen: ${silenenler}`
     });
   }
 
   static async panelAcildi(userId, sayfa = 1, guildId = null, traceId = null) {
-    await LogYonetim. writeLog({
-      tur:  'panel_acildi',
+    await LogYonetim.writeLog({
+      tur: 'panel_acildi',
       emoji: '📊',
-      severity: 'INFO',
+      severity:  'INFO',
       kullaniciID: userId,
       guildID: guildId,
       sayfa,
       traceID: traceId,
-      mesaj: `Panel açıldı - Sayfa ${sayfa}`
+      mesaj:  `Panel açıldı - Sayfa ${sayfa}`
     });
 
     await LogYonetim.writeRegularLog('panel', userId, {
@@ -415,7 +460,7 @@ class LogYonetim {
       emoji: '📊',
       severity: 'INFO',
       sayfa,
-      traceID:  traceId,
+      traceID: traceId,
       mesaj: 'Panel açıldı'
     });
   }
@@ -428,23 +473,23 @@ class LogYonetim {
       'unknown': '❓ Bilinmeyen neden'
     };
 
-    await LogYonetim. writeLog({
-      tur:  'panel_kapandi',
+    await LogYonetim.writeLog({
+      tur: 'panel_kapandi',
       emoji: '🔴',
       severity: 'INFO',
       kullaniciID: userId,
       guildID: guildId,
       neden,
       traceID: traceId,
-      mesaj: `Panel kapatıldı - ${nedenAciklama[neden] || neden}`
+      mesaj:  `Panel kapatıldı - ${nedenAciklama[neden] || neden}`
     });
 
     await LogYonetim.writeRegularLog('panel', userId, {
       tur: 'panel_kapandi',
-      emoji:  '🔴',
+      emoji: '🔴',
       severity: 'INFO',
       neden,
-      traceID:  traceId,
+      traceID: traceId,
       mesaj: 'Panel kapatıldı'
     });
   }
@@ -452,33 +497,34 @@ class LogYonetim {
   static async kullaniciKomut(userId, komut, guildId = null, traceId = null) {
     await LogYonetim.writeLog({
       tur: 'komut_kullanildi',
-      emoji: '💬',
+      emoji:  '💬',
       severity: 'INFO',
       kullaniciID: userId,
       guildID: guildId,
       komut,
       traceID: traceId,
-      mesaj: `Komut kullanıldı:  /${komut}`
+      mesaj:  `Komut kullanıldı:  /${komut}`
     });
   }
 
   static async yetkiHatasi(userId, islem, guildId = null, traceId = null) {
     await LogYonetim.writeLog({
-      tur: 'yetki_hatasi',
+      tur:  'yetki_hatasi',
       emoji: '🚫',
-      severity: 'WARN',
+      severity:  'WARN',
       kullaniciID: userId,
       guildID: guildId,
       islem,
-      traceID:  traceId,
-      mesaj: `Yetkisiz işlem - ${islem}`
+      traceID: traceId,
+      mesaj:  `Yetkisiz işlem - ${islem}`
     });
 
     await LogYonetim.writeRegularLog('sunucular', userId, {
       tur: 'yetki_hatasi',
-      emoji:  '🚫',
+      emoji: '🚫',
       severity: 'WARN',
       islem,
+      guildID: guildId,
       traceID: traceId,
       mesaj: 'Yetkisiz işlem'
     });
@@ -489,8 +535,8 @@ class LogYonetim {
       tur: 'sorgu_basarili',
       emoji: '✅',
       severity: 'DEBUG',
-      kullaniciID:  userId,
-      guildID:  guildId,
+      kullaniciID: userId,
+      guildID: guildId,
       tablo,
       sure_ms,
       satirSayisi,
@@ -505,42 +551,42 @@ class LogYonetim {
       tablo,
       sure_ms,
       satirSayisi,
-      traceID: traceId,
-      mesaj:  'Sorgu başarılı'
+      traceID:  traceId,
+      mesaj: 'Sorgu başarılı'
     });
   }
 
   static async sorguHatasi(userId, tablo, hata, guildId = null, traceId = null) {
-    await LogYonetim. writeLog({
+    await LogYonetim.writeLog({
       tur:  'sorgu_hatasi',
       emoji: '❌',
-      severity: 'ERROR',
+      severity:  'ERROR',
       kullaniciID: userId,
       guildID: guildId,
       tablo,
-      hata:  hata.substring(0, 200),
+      hata:  hata. substring(0, 200),
       traceID: traceId,
-      mesaj:  `Sorgu hatası - ${tablo}`
+      mesaj: `Sorgu hatası - ${tablo}`
     });
 
     await LogYonetim.writeRegularLog('database', 'sorgu', {
-      tur: 'sorgu_hatasi',
+      tur:  'sorgu_hatasi',
       emoji: '❌',
-      severity: 'ERROR',
+      severity:  'ERROR',
       tablo,
       hata:  hata.substring(0, 100),
       traceID: traceId,
-      mesaj:  'Sorgu hatası'
+      mesaj: 'Sorgu hatası'
     });
   }
 
   static async dmGonderildi(userId, baslik, guildId = null, traceId = null) {
     await LogYonetim.writeLog({
       tur: 'dm_gonderildi',
-      emoji: '📧',
-      severity: 'INFO',
-      kullaniciID:  userId,
-      guildID:  guildId,
+      emoji:  '📧',
+      severity:  'INFO',
+      kullaniciID: userId,
+      guildID: guildId,
       baslik,
       traceID: traceId,
       mesaj: `DM gönderildi - ${baslik}`
@@ -548,11 +594,11 @@ class LogYonetim {
 
     await LogYonetim.writeRegularLog('dm', userId, {
       tur: 'dm_gonderildi',
-      emoji:  '📧',
-      severity:  'INFO',
+      emoji: '📧',
+      severity: 'INFO',
       baslik,
       traceID: traceId,
-      mesaj:  'DM gönderildi'
+      mesaj: 'DM gönderildi'
     });
   }
 
@@ -565,9 +611,9 @@ class LogYonetim {
     };
 
     await LogYonetim.writeLog({
-      tur: 'dm_gonderim_hatasi',
-      emoji:  '⚠️',
-      severity:  'WARN',
+      tur:  'dm_gonderim_hatasi',
+      emoji: '⚠️',
+      severity: 'WARN',
       kullaniciID: userId,
       guildID: guildId,
       neden,

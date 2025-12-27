@@ -1,5 +1,5 @@
 // dbmanager.js
-// Enterprise Veritabanı Yöneticisi - KRITIK GÜNCELLEMELER
+// Enterprise Veritabani Yoneticisi - KRITIK GUNCELLEMELER
 // Graceful disable, pool recovery, timeout dinamik, logger fallback
 
 const mysql = require('mysql2/promise');
@@ -10,8 +10,7 @@ const path = require('path');
 
 class DatabaseManager {
   constructor(logger) {
-    // Logger fallback - null olsa bile çalışsın
-    this.logger = logger || this._createDummyLogger();
+    this. logger = logger || this._createDummyLogger();
     
     this.pools = new Map();
     this.queryQueue = [];
@@ -19,34 +18,30 @@ class DatabaseManager {
     this.isDisabled = false;
     this.disableReason = null;
 
-    // ✅ TÜRKÇE ENV ADLANDIRMASI - ZORUNLU
-    this.kuyrukMaksBoyutu = Number(process.env.DB_KUYRUK_MAKS_BOYUTU || 1000);
-    this.yenidenDenmeSayisi = Number(process.env. DB_YENIDEN_DENEME_SAYISI || 3);
-    this.yenidenGecikmeMs = Number(process.env.DB_YENIDEN_DENEME_GECIKME_MS || 1000);
-    this.maksBaglanti = Number(process.env.DB_MAKS_BAGLANTI || 20);
-    this.bostaZamanAsimi = Number(process.env.DB_BOSTA_ZAMAN_ASIMI || 30000);
+    this.kuyrukMaksBoyutu = Number(process.env. DB_KUYRUK_MAKS_BOYUTU || 1000);
+    this.yenidenDenmeSayisi = Number(process.env.DB_YENIDEN_DENEME_SAYISI || 3);
+    this.yenidenGecikmeMs = Number(process. env.DB_YENIDEN_DENEME_GECIKME_MS || 1000);
+    this.maksBaglanti = Number(process. env.DB_MAKS_BAGLANTI || 20);
+    this.bostaZamanAsimi = Number(process. env.DB_BOSTA_ZAMAN_ASIMI || 30000);
     this.maksYenidenBaglanti = Number(process.env.DB_MAKS_YENIDEN_BAGLANTI || 5);
     
-    // ✅ DINAMIK TIMEOUT - SANIYE CİNSİNDEN
-    const timeoutSaniye = Number(process.env. DB_ZAMANASIMI_YENILEME || 30);
+    const timeoutSaniye = Number(process. env.DB_ZAMANASIMI_YENILEME || 30);
     this.zamanAsimi = timeoutSaniye * 1000;
     
-    // ✅ MULTIPLE STATEMENTS - VARSAYILAN FALSE
     this.cokluSqlIfade = this._parseEnvBoolean(process.env. COKLU_SQL_IFADE);
 
     this.connectionLostRetries = 0;
-    this. stats = {
+    this.stats = {
       totalQueries: 0,
       successfulQueries: 0,
       failedQueries: 0,
       totalConnections: 0,
-      reconnectAttempts: 0,
+      reconnectAttempts:  0,
       poolErrors: 0,
       multipleStatementsBlocked: 0,
-      injectionAttemptsBlocked: 0
+      injectionAttemptsBlocked:  0
     };
 
-    // Tehlikeli patterns
     this.dangerousPatterns = [
       /DROP\s+TABLE/i,
       /DELETE\s+FROM/i,
@@ -56,7 +51,6 @@ class DatabaseManager {
       /EXECUTE\s*\(/i
     ];
 
-    // SQL Injection patterns
     this.injectionPatterns = [
       /('|(\\)|(--))/,
       /union\s+select/i,
@@ -66,87 +60,72 @@ class DatabaseManager {
     ];
   }
 
-  /**
-   * Dummy logger fallback
-   * @private
-   */
   _createDummyLogger() {
     return {
       info: () => {},
       warn: () => {},
-      error:  () => {},
+      error: () => {},
       debug: () => {},
       critical: () => {}
     };
   }
 
-  /**
-   * Boolean ENV parse
-   * @private
-   */
   _parseEnvBoolean(value) {
     if (! value) return false;
     const str = String(value).toLowerCase().trim();
     return str === '1' || str === 'true' || str === 'yes';
   }
 
-  /**
-   * ✅ ENV GEÇERLİLİĞİ KONTROLÜ
-   * DB yoksa graceful disable
-   */
   checkEnvValidity() {
     const requiredEnvs = ['DB_HOST', 'DB_USER', 'DB_PASS'];
     const missing = [];
 
     for (const env of requiredEnvs) {
-      if (!process.env[env]) {
+      if (! process.env[env]) {
         missing.push(env);
       }
     }
 
     if (missing.length > 0) {
       this.isDisabled = true;
-      this.disableReason = `Eksik ENV: ${missing.join(', ')}`;
+      this.disableReason = `Eksik ENV:  ${missing.join(', ')}`;
       
-      this.logger.warn('db_disabled', `⚙️ Veritabanı devre dışı:  ${this.disableReason}`, {
+      this.logger. warn('db_disabled', `Veritabani devre disi: ${this.disableReason}`, {
         klasor: 'database',
-        key: 'startup'
+        key:  'startup'
       }).catch(() => {});
 
-      console.log(`⚠️ VERİTABANI DEVRE DIŞI: ${this.disableReason}`);
+      console.warn('[WARN] VERITABANI DEVRE DISI:', this. disableReason);
       return false;
     }
 
     return true;
   }
 
-  /**
-   * Veritabanı kaydı
-   */
   register(dbName, config) {
     if (this.isDisabled) {
-      this.logger.warn('db_register_skipped', `📦 DB kaydı atlandı (devre dışı)`, {
+      this.logger.warn('db_register_skipped', `DB kaydi atlandi (devre disi)`, {
         klasor: 'database',
-        key: 'startup',
+        key:  'startup',
         dbName,
         neden: this.disableReason
       }).catch(() => {});
       return false;
     }
 
-    if (this.pools.has(dbName)) {
-      throw new Error(`Pool '${dbName}' zaten kayıtlı`);
+    if (this. pools.has(dbName)) {
+      throw new Error(`Pool '${dbName}' zaten kayitli`);
     }
 
     const finalConfig = {
       host: config.host,
       user: config.user,
       password: config.password,
-      database: config.database || dbName,
-      waitForConnections: true,
+      database:  config.database || dbName,
+      waitForConnections:  true,
       connectionLimit: this.maksBaglanti,
       queueLimit: 0,
-      enableKeepAlive: true,
+      enableKeepAlive:  true,
       keepAliveInitialDelayMs: 0,
       idleTimeout: this.bostaZamanAsimi,
       multipleStatements: this.cokluSqlIfade
@@ -155,7 +134,6 @@ class DatabaseManager {
     try {
       const pool = mysql.createPool(finalConfig);
 
-      // ✅ POOL ERROR RECOVERY
       pool.on('error', (err) => {
         this._handlePoolError(dbName, err);
       });
@@ -171,7 +149,7 @@ class DatabaseManager {
         createdAt: Date.now()
       });
 
-      this.logger.info('db_kayit', `🟢 DB kaydedildi: ${dbName}`, {
+      this.logger.info('db_kayit', `DB kaydedildi: ${dbName}`, {
         klasor: 'database',
         key: 'startup',
         dbName,
@@ -180,7 +158,8 @@ class DatabaseManager {
 
       return true;
     } catch (error) {
-      this.logger. error('db_kayit_hata', `❌ Pool kayıt hatası: ${dbName}`, {
+      console.error('[ERROR] db_kayit_hata', dbName, error. message);
+      this.logger.error('db_kayit_hata', `Pool kayit hatasi: ${dbName}`, {
         klasor: 'database',
         key: 'startup',
         dbName,
@@ -190,77 +169,66 @@ class DatabaseManager {
     }
   }
 
-  /**
-   * ✅ POOL ERROR HANDLER - OTOMATİK RECOVERY
-   * @private
-   */
   async _handlePoolError(dbName, error) {
-    const poolData = this.pools.get(dbName);
+    const poolData = this.pools. get(dbName);
     if (!poolData) return;
 
-    poolData. lastError = error;
+    poolData.lastError = error;
     poolData.errorCount++;
     poolData.isHealthy = false;
     this.stats.poolErrors++;
 
-    this.logger.warn('db_pool_hata', `⚠️ Pool hatası: ${dbName} (${error.code})`, {
+    console.warn('[WARN] db_pool_hata', dbName, error.code);
+    this.logger.warn('db_pool_hata', `Pool hatasi: ${dbName} (${error.code})`, {
       klasor: 'database',
-      key: 'error',
+      key:  'error',
       dbName,
       hataMesaji: error.message,
       hataSayisi: poolData.errorCount,
       kod: error.code
     }).catch(() => {});
 
-    // Connection lost errors
-    if (['PROTOCOL_CONNECTION_LOST', 'ECONNREFUSED', 'PROTOCOL_PACKETS_OUT_OF_ORDER'].includes(error.code)) {
+    if (['PROTOCOL_CONNECTION_LOST', 'ECONNREFUSED', 'PROTOCOL_PACKETS_OUT_OF_ORDER'].includes(error. code)) {
       await this._attemptReconnect(dbName);
     }
   }
 
-  /**
-   * ✅ OTOMATİK YENIDEN BAĞLANMA - EXPONENTIAL BACKOFF
-   * @private
-   */
   async _attemptReconnect(dbName) {
     const poolData = this.pools.get(dbName);
     if (!poolData) return;
 
-    poolData.reconnectAttempts++;
+    poolData. reconnectAttempts++;
     this.stats.reconnectAttempts++;
 
-    // MAX DENEME AŞILDI
     if (poolData.reconnectAttempts > this.maksYenidenBaglanti) {
       poolData.isHealthy = false;
       
-      this.logger.critical('db_yeniden_bag_basarisiz', `🔴 YENİDEN BAĞLANMA BAŞARISIZ: ${dbName}`, {
-        klasor: 'database',
+      console.error('[CRITICAL] db_yeniden_bag_basarisiz', dbName);
+      this.logger.critical('db_yeniden_bag_basarisiz', `YENIDEN BAGLANMA BASARISIZ: ${dbName}`, {
+        klasor:  'database',
         key: 'critical',
         dbName,
         denemeSayisi: poolData.reconnectAttempts,
-        maksYenidenBaglanti:  this.maksYenidenBaglanti
+        maksYenidenBaglanti: this. maksYenidenBaglanti
       }).catch(() => {});
 
       return;
     }
 
-    // Exponential backoff
-    const delayMs = Math.min(1000 * Math.pow(2, poolData.reconnectAttempts), 30000);
+    const delayMs = Math. min(1000 * Math.pow(2, poolData.reconnectAttempts), 30000);
 
-    this.logger.info('db_yeniden_bag_deneme', `🔄 Yeniden bağlanma:  ${dbName} (${poolData.reconnectAttempts}/${this.maksYenidenBaglanti})`, {
+    this.logger.info('db_yeniden_bag_deneme', `Yeniden baglanma:  ${dbName} (${poolData. reconnectAttempts}/${this.maksYenidenBaglanti})`, {
       klasor: 'database',
       key: 'reconnect',
       dbName,
-      deneme: poolData.reconnectAttempts,
+      deneme: poolData. reconnectAttempts,
       gecikmeMs: delayMs
     }).catch(() => {});
 
     setTimeout(async () => {
       try {
-        // Eski pool kapat
         await poolData.pool.end().catch(() => {});
 
-        // Yeni pool oluştur
         const newPool = mysql.createPool(poolData.config);
         newPool.on('error', (err) => {
           this._handlePoolError(dbName, err);
@@ -270,13 +238,14 @@ class DatabaseManager {
         poolData.isHealthy = true;
         poolData.errorCount = 0;
 
-        this.logger.info('db_yeniden_bag_basarili', `🟢 Pool onarıldı: ${dbName}`, {
+        this.logger.info('db_yeniden_bag_basarili', `Pool onarildi: ${dbName}`, {
           klasor: 'database',
           key: 'reconnect',
           dbName
         }).catch(() => {});
       } catch (err) {
-        this.logger. error('db_yeniden_bag_tekrar_hata', `❌ Onarım başarısız: ${dbName}`, {
+        console.error('[ERROR] db_yeniden_bag_tekrar_hata', dbName, err.message);
+        this.logger. error('db_yeniden_bag_tekrar_hata', `Onarim basarisiz: ${dbName}`, {
           klasor: 'database',
           key: 'reconnect',
           dbName,
@@ -286,51 +255,45 @@ class DatabaseManager {
     }, delayMs);
   }
 
-  /**
-   * ✅ MULTIPLE STATEMENTS KONTROLÜ
-   * @private
-   */
   _validateMultipleStatements(sql) {
-    if (!this.cokluSqlIfade && sql.includes(';')) {
+    if (! this.cokluSqlIfade && sql.includes(';')) {
       const parts = sql.split(';').filter(p => p.trim());
       if (parts.length > 1) {
         this.stats.multipleStatementsBlocked++;
         
-        this.logger.error('db_multi_stmt_engel', `⛔ Multiple statements engellendi`, {
+        console.error('[ERROR] db_multi_stmt_engel', 'Multiple statements engellendi');
+        this.logger.error('db_multi_stmt_engel', `Multiple statements engellendi`, {
           klasor: 'database',
           key: 'security',
-          sql:  sql.substring(0, 100)
+          sql:  sql. substring(0, 100)
         }).catch(() => {});
 
-        throw new Error('⛔ Multiple statements bu sistemde devre dışı');
+        throw new Error('Multiple statements bu sistemde devre disi');
       }
     }
 
-    // MULTIPLE STATEMENTS AÇIKSA UYARI VER
     if (this.cokluSqlIfade && sql.includes(';')) {
-      const parts = sql.split(';').filter(p => p.trim());
+      const parts = sql. split(';').filter(p => p. trim());
       if (parts.length > 1) {
-        this.logger.warn('db_multi_stmt_aktif', `⚠️ Multiple statements AKTIF ve kullanılıyor`, {
+        console.warn('[WARN] db_multi_stmt_aktif', 'Multiple statements AKTIF');
+        this.logger.warn('db_multi_stmt_aktif', `Multiple statements AKTIF ve kullaniliyor`, {
           klasor: 'database',
           key: 'security',
-          deyimSayisi: parts.length
+          deyimSayisi: parts. length
         }).catch(() => {});
       }
     }
   }
 
-  /**
-   * ✅ SQL INJECTION TESPİTİ
-   * @private
-   */
   _detectSQLInjection(sql) {
     for (const pattern of this.injectionPatterns) {
       if (pattern.test(sql)) {
         this.stats.injectionAttemptsBlocked++;
         
-        this.logger.error('db_injection_tespit', `🚨 SQL INJECTION TESPİTİ`, {
+        console.error('[ERROR] db_injection_tespit', 'SQL INJECTION TESPITI');
+        this.logger.error('db_injection_tespit', `SQL INJECTION TESPITI`, {
           klasor: 'database',
-          key: 'security',
+          key:  'security',
           sql:  sql.substring(0, 100)
         }).catch(() => {});
 
@@ -340,17 +303,14 @@ class DatabaseManager {
     return false;
   }
 
-  /**
-   * ✅ TEHLIKELI QUERY TESPİTİ
-   * @private
-   */
   _isForbiddenQuery(sql) {
-    for (const pattern of this. dangerousPatterns) {
+    for (const pattern of this.dangerousPatterns) {
       if (pattern.test(sql)) {
-        this.logger.error('db_forbidden_query', `⛔ TEHLIKELI QUERY ENGELLENDİ`, {
+        console.error('[ERROR] db_forbidden_query', 'TEHLIKELI QUERY ENGELLENDI');
+        this.logger.error('db_forbidden_query', `TEHLIKELI QUERY ENGELLENDI`, {
           klasor: 'database',
           key: 'security',
-          sql: sql.substring(0, 100)
+          sql:  sql.substring(0, 100)
         }).catch(() => {});
         return true;
       }
@@ -358,23 +318,15 @@ class DatabaseManager {
     return false;
   }
 
-  /**
-   * Query sıraya al
-   * @private
-   */
   _enqueueQuery(queueItem) {
     if (this.queryQueue.length >= this.kuyrukMaksBoyutu) {
-      throw new Error(`⛔ Query sırası dolu (${this.kuyrukMaksBoyutu})`);
+      throw new Error(`Query sirasi dolu (${this.kuyrukMaksBoyutu})`);
     }
 
     this.queryQueue.push(queueItem);
     this._processQueue();
   }
 
-  /**
-   * Query sırasını işle
-   * @private
-   */
   async _processQueue() {
     if (this.isProcessingQueue || this.queryQueue.length === 0) {
       return;
@@ -383,13 +335,13 @@ class DatabaseManager {
     this.isProcessingQueue = true;
 
     while (this.queryQueue.length > 0) {
-      const queueItem = this.queryQueue.shift();
+      const queueItem = this. queryQueue.shift();
 
       try {
         const result = await this._executeQuery(
-          queueItem.dbName,
-          queueItem. sql,
-          queueItem. params,
+          queueItem. dbName,
+          queueItem.sql,
+          queueItem.params,
           queueItem.options
         );
 
@@ -404,37 +356,36 @@ class DatabaseManager {
     this.isProcessingQueue = false;
   }
 
-  /**
-   * ✅ GERÇEK QUERY ÇALIŞTIRIR - SEÇİCİ VALIDASYON
-   * @private
-   */
   async _executeQuery(dbName, sql, params, options = {}) {
-    if (this.isDisabled) {
-      throw new Error(`⛔ Veritabanı devre dışı:  ${this.disableReason}`);
+    if (this. isDisabled) {
+      throw new Error(`Veritabani devre disi: ${this.disableReason}`);
     }
 
     const poolData = this.pools.get(dbName);
     if (!poolData) {
-      throw new Error(`⛔ Pool bulunamadı: ${dbName}`);
+      throw new Error(`Pool bulunamadi: ${dbName}`);
     }
 
     const traceId = options.traceId || crypto.randomUUID();
     const queryStartTime = Date.now();
+    
+    const timeout = options.timeoutMs || this.zamanAsimi;
+    const maxRetry = options.retries !== undefined ? options.retries : this.yenidenDenmeSayisi;
+    
     let attempt = 0;
     let lastError = null;
 
-    // VALIDASYONLAR
     this._validateMultipleStatements(sql);
 
     if (this._detectSQLInjection(sql)) {
-      throw new Error('🚨 SQL Injection tespit edildi! ');
+      throw new Error('SQL Injection tespit edildi! ');
     }
 
     if (this._isForbiddenQuery(sql)) {
-      throw new Error('⛔ Bu query işlemi engellendi');
+      throw new Error('Bu query islemi engellendi');
     }
 
-    while (attempt < this.yenidenDenmeSayisi) {
+    while (attempt < maxRetry) {
       try {
         if (! poolData.isHealthy && attempt > 0) {
           await new Promise(resolve => 
@@ -443,9 +394,9 @@ class DatabaseManager {
         }
 
         const connection = await Promise.race([
-          poolData. pool.getConnection(),
+          poolData.pool. getConnection(),
           new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('⏱️ Bağlantı timeout')), this.zamanAsimi)
+            setTimeout(() => reject(new Error('Baglanti timeout')), timeout)
           )
         ]);
 
@@ -454,29 +405,29 @@ class DatabaseManager {
 
           if (Array.isArray(params) && params.length > 0) {
             result = await Promise.race([
-              connection.execute(sql, params),
+              connection. execute(sql, params),
               new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('⏱️ Query timeout')), this.zamanAsimi)
+                setTimeout(() => reject(new Error('Query timeout')), timeout)
               )
             ]);
           } else {
             result = await Promise.race([
               connection.query(sql),
               new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('⏱️ Query timeout')), this.zamanAsimi)
+                setTimeout(() => reject(new Error('Query timeout')), timeout)
               )
             ]);
           }
 
           const queryDuration = Date.now() - queryStartTime;
 
-          this.stats.totalQueries++;
+          this.stats. totalQueries++;
           this.stats.successfulQueries++;
 
           if (this. logger && options.logQuery !== false) {
-            this.logger.debug('db_sorgu_basarili', `🟢 Sorgu başarılı (${queryDuration}ms)`, {
+            this.logger.debug('db_sorgu_basarili', `Sorgu basarili (${queryDuration}ms)`, {
               klasor: 'database',
-              key: 'query',
+              key:  'query',
               dbName,
               sure: queryDuration,
               satirSayisi: result[0] ? result[0].length : 0,
@@ -489,16 +440,17 @@ class DatabaseManager {
 
           return result;
         } finally {
-          connection.release();
+          connection. release();
         }
       } catch (error) {
         lastError = error;
         attempt++;
         this.stats.failedQueries++;
 
-        if (this.logger && attempt < this.yenidenDenmeSayisi) {
-          this.logger.warn('db_query_retry', `⚠️ Retry ${attempt}/${this.yenidenDenmeSayisi}`, {
-            klasor: 'database',
+        if (this.logger && attempt < maxRetry) {
+          console.warn('[WARN] db_query_retry', `Retry ${attempt}/${maxRetry}`, error.message);
+          this.logger.warn('db_query_retry', `Retry ${attempt}/${maxRetry}`, {
+            klasor:  'database',
             key: 'query',
             dbName,
             hata: error.message,
@@ -513,7 +465,7 @@ class DatabaseManager {
           await this._handlePoolError(dbName, error);
         }
 
-        if (attempt < this.yenidenDenmeSayisi) {
+        if (attempt < maxRetry) {
           await new Promise(resolve => 
             setTimeout(resolve, this.yenidenGecikmeMs * attempt)
           );
@@ -521,26 +473,24 @@ class DatabaseManager {
       }
     }
 
-    this.logger.error('db_query_basarisiz', `❌ Sorgu başarısız (${this.yenidenDenmeSayisi} deneme)`, {
-      klasor: 'database',
+    console.error('[ERROR] db_query_basarisiz', `${maxRetry} deneme basarisiz`, lastError?. message);
+    this.logger.error('db_query_basarisiz', `Sorgu basarisiz (${maxRetry} deneme)`, {
+      klasor:  'database',
       key: 'query',
       dbName,
       sql:  sql.substring(0, 100),
       hata: lastError?. message,
-      denemeSayisi: this.yenidenDenmeSayisi,
+      denemeSayisi:  maxRetry,
       sure: Date.now() - queryStartTime,
       traceID: traceId
     }).catch(() => {});
 
-    throw lastError || new Error('❌ Veritabanı sorgusu başarısız');
+    throw lastError || new Error('Veritabani sorgusu basarisiz');
   }
 
-  /**
-   * Ana query interface
-   */
   async query(dbName, sql, params = [], options = {}) {
     if (this.isDisabled) {
-      throw new Error(`⛔ Veritabanı devre dışı: ${this.disableReason}`);
+      throw new Error(`Veritabani devre disi: ${this.disableReason}`);
     }
 
     if (options.queue) {
@@ -563,11 +513,8 @@ class DatabaseManager {
     return this._executeQuery(dbName, sql, params, options);
   }
 
-  /**
-   * Hafif sorgu
-   */
   async lightQuery(dbName, sql, params = [], traceId = null) {
-    return this. query(dbName, sql, params, {
+    return this.query(dbName, sql, params, {
       retries: 2,
       queue: true,
       timeoutMs: 5000,
@@ -575,36 +522,30 @@ class DatabaseManager {
     });
   }
 
-  /**
-   * Ağır sorgu
-   */
   async heavyQuery(dbName, sql, params = [], traceId = null) {
     return this.query(dbName, sql, params, {
-      retries:  3,
-      queue: true,
+      retries: 3,
+      queue:  true,
       timeoutMs: this.zamanAsimi,
       traceId
     });
   }
 
-  /**
-   * Transaction
-   */
   async transaction(dbName, callback) {
     if (this.isDisabled) {
-      throw new Error(`⛔ Veritabanı devre dışı: ${this.disableReason}`);
+      throw new Error(`Veritabani devre disi: ${this.disableReason}`);
     }
 
     const poolData = this.pools.get(dbName);
     if (!poolData) {
-      throw new Error(`⛔ Pool bulunamadı: ${dbName}`);
+      throw new Error(`Pool bulunamadi: ${dbName}`);
     }
 
     const connection = await poolData.pool.getConnection();
     try {
       await connection.beginTransaction();
       const result = await callback(connection);
-      await connection.commit();
+      await connection. commit();
       return result;
     } catch (error) {
       await connection. rollback();
@@ -614,9 +555,6 @@ class DatabaseManager {
     }
   }
 
-  /**
-   * Sağlık kontrolü
-   */
   async healthCheck() {
     if (this.isDisabled) {
       return { status: 'disabled', reason: this.disableReason };
@@ -626,12 +564,12 @@ class DatabaseManager {
 
     for (const [dbName, poolData] of this.pools) {
       try {
-        const connection = await poolData.pool. getConnection();
+        const connection = await poolData. pool.getConnection();
         await connection.ping();
         connection.release();
 
         results[dbName] = {
-          status: '🟢 healthy',
+          status: 'healthy',
           isHealthy: true,
           queries: this.stats.totalQueries,
           successRate: ((this.stats.successfulQueries / Math.max(this.stats.totalQueries, 1)) * 100).toFixed(2) + '%'
@@ -640,15 +578,16 @@ class DatabaseManager {
         poolData.isHealthy = true;
       } catch (error) {
         results[dbName] = {
-          status: '🔴 unhealthy',
+          status: 'unhealthy',
           isHealthy: false,
           hata: error.message
         };
 
         poolData.isHealthy = false;
 
-        this.logger.error('db_saglik_hata', `❌ Sağlık kontrolü başarısız: ${dbName}`, {
-          klasor: 'database',
+        console.error('[ERROR] db_saglik_hata', dbName, error.message);
+        this.logger.error('db_saglik_hata', `Saglik kontrolu basarisiz: ${dbName}`, {
+          klasor:  'database',
           key: 'health',
           dbName,
           hata: error.message
@@ -659,22 +598,16 @@ class DatabaseManager {
     return results;
   }
 
-  /**
-   * İstatistik
-   */
   getStats() {
     return {
       ... this.stats,
       kuyrukUzunlugu: this.queryQueue.length,
       poolSayisi: this.pools.size,
       disabled: this.isDisabled,
-      disableReason: this. disableReason
+      disableReason: this.disableReason
     };
   }
 
-  /**
-   * Kapatma
-   */
   async shutdown(timeoutMs = 5000) {
     try {
       const shutdownPromises = [];
@@ -684,21 +617,22 @@ class DatabaseManager {
           Promise.race([
             poolData.pool. end(),
             new Promise((_, reject) =>
-              setTimeout(() => reject(new Error(`⏱️ Kapatma timeout:  ${dbName}`)), timeoutMs)
+              setTimeout(() => reject(new Error(`Kapatma timeout: ${dbName}`)), timeoutMs)
             )
           ])
         );
       }
 
-      await Promise. all(shutdownPromises);
+      await Promise.all(shutdownPromises);
 
-      this.logger.info('db_kapatildi', `🔴 Tüm DB havuzları kapatıldı`, {
+      this.logger.info('db_kapatildi', `Tum DB havuzlari kapatildi`, {
         klasor: 'database',
         key: 'shutdown',
-        poolSayisi: this.pools. size
+        poolSayisi: this. pools.size
       }).catch(() => {});
     } catch (error) {
-      this.logger.error('db_kapatma_hata', `❌ Kapatma hatası`, {
+      console.error('[ERROR] db_kapatma_hata', error. message);
+      this.logger.error('db_kapatma_hata', `Kapatma hatasi`, {
         klasor: 'database',
         key: 'shutdown',
         hata: error.message
