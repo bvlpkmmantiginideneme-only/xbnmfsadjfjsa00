@@ -28,10 +28,15 @@ const VeriYonetim = require('../veri_yonetim');
 
 // ==================== SABİTLER ====================
 
+// Veritabanı yapılandırması
+const IO7R_DATABASE = 'io7r';
+const IO7R_TABLE = 'io7r';
+const IO7R_FULL_TABLE = `${IO7R_DATABASE}. ${IO7R_TABLE}`;
+
 // Klasör yolları
 const COP_TEMIZLIK_DIR = path.join(process.cwd(), 'cop_temizlik');
-const SUNUCU_DM_VERILER_DIR = path.join(process.cwd(), 'sunucu_dm_veriler');
-const DM_VERILER_DIR = path.join(SUNUCU_DM_VERILER_DIR, 'dm');
+const SUNUCU_DM_VERILER_DIR = path. join(process.cwd(), 'sunucu_dm_veriler');
+const DM_VERILER_DIR = path. join(SUNUCU_DM_VERILER_DIR, 'dm');
 const SUNUCU_VERILER_DIR = path.join(SUNUCU_DM_VERILER_DIR, 'sunucu');
 
 // Embed renkleri
@@ -42,11 +47,14 @@ const WARNING_EMBED_COLOR = '#ffaa00';
 const PROCESSING_EMBED_COLOR = '#9966ff';
 
 // ENV'den timeout değerlerini al (varsayılan değerlerle)
-const DB_TIMEOUT_MS = parseInt(process.env.DB_TIMEOUT_MS, 10) || 15000;
-const PENDING_RESULT_TIMEOUT_MS = parseInt(process.env.PENDING_RESULT_TIMEOUT_MS, 10) || 300000;
+const DB_TIMEOUT_MS = parseInt(process.env. DB_TIMEOUT_MS, 10) || 15000;
+const PENDING_RESULT_TIMEOUT_MS = parseInt(process. env.PENDING_RESULT_TIMEOUT_MS, 10) || 300000;
+
+// Dosya silme gecikmesi (DM gönderiminden sonra)
+const FILE_DELETE_DELAY_MS = parseInt(process. env.FILE_DELETE_DELAY_MS, 10) || 2000;
 
 // Base64 decode linki (configurable)
-const BASE64_DECODE_URL = process.env.BASE64_DECODE_URL || 'https://www.base64decode.org/';
+const BASE64_DECODE_URL = process.env. BASE64_DECODE_URL || 'https://www.base64decode.org/';
 
 // Geçici sonuç depolama (buton işlemleri için)
 const pendingResults = new Map();
@@ -55,7 +63,7 @@ const pendingResults = new Map();
 
 /**
  * ENV değerini normalize ederek boolean'a çevirir
- * Desteklenen değerler:  1, true, TRUE, "true", 0, false, FALSE, "false"
+ * Desteklenen değerler: 1, true, TRUE, "true", 0, false, FALSE, "false"
  * @param {string|number|boolean|undefined|null} value - ENV değeri
  * @returns {boolean} - Normalize edilmiş boolean değer
  */
@@ -95,11 +103,11 @@ function normalizeEnvBoolean(value) {
 function isMaskingEnabled(commandType) {
   switch (commandType) {
     case 'ucretsiz': 
-      return normalizeEnvBoolean(process.env.UCRETSIZ_KOMUTLAR_GIZLILIK_MASKELEME);
+      return normalizeEnvBoolean(process.env. UCRETSIZ_KOMUTLAR_GIZLILIK_MASKELEME);
     case 'vip': 
       return normalizeEnvBoolean(process.env.VIP_KOMUTLAR_GIZLILIK_MASKELEME);
     case 'premium': 
-      return normalizeEnvBoolean(process.env.PREMIUM_KOMUTLAR_GIZLILIK_MASKELEME);
+      return normalizeEnvBoolean(process.env. PREMIUM_KOMUTLAR_GIZLILIK_MASKELEME);
     default:
       return true;
   }
@@ -117,7 +125,7 @@ function isMaskingEnabled(commandType) {
  * Örnek:  10012345678 → XX0123456XX
  * 
  * @param {string} tc - TC kimlik numarası (11 haneli)
- * @param {string} commandType - Komut tipi:  'ucretsiz', 'vip', 'premium'
+ * @param {string} commandType - Komut tipi: 'ucretsiz', 'vip', 'premium'
  * @returns {string} - Maskelenmiş veya gerçek TC (ENV'e bağlı)
  */
 function maskTcForLog(tc, commandType) {
@@ -144,7 +152,7 @@ async function encryptTcForLog(tc) {
       return 'GECERSIZ_TC';
     }
 
-    const result = await Base64Sifreleyici.encodeText(tc);
+    const result = await Base64Sifreleyici. encodeText(tc);
 
     if (result && result.success) {
       return result.data;
@@ -177,8 +185,8 @@ function formatFullDate() {
   const pad = (n) => n.toString().padStart(2, '0');
   const yil = now.getFullYear();
   const ay = pad(now.getMonth() + 1);
-  const gun = pad(now.getDate());
-  const saat = pad(now.getHours());
+  const gun = pad(now. getDate());
+  const saat = pad(now. getHours());
   const dakika = pad(now.getMinutes());
   const saniye = pad(now.getSeconds());
   return `${yil}-${ay}-${gun}_${saat}-${dakika}-${saniye}`;
@@ -186,18 +194,18 @@ function formatFullDate() {
 
 /**
  * Okunabilir tarih formatı döndürür
- * @returns {string} - dd.MM.yyyy HH:mm:ss formatında tarih
+ * @returns {string} - dd. MM.yyyy HH: mm:ss formatında tarih
  */
 function formatReadableDate() {
   const now = new Date();
   const pad = (n) => n.toString().padStart(2, '0');
-  const gun = pad(now.getDate());
-  const ay = pad(now.getMonth() + 1);
+  const gun = pad(now. getDate());
+  const ay = pad(now. getMonth() + 1);
   const yil = now.getFullYear();
   const saat = pad(now.getHours());
   const dakika = pad(now.getMinutes());
   const saniye = pad(now.getSeconds());
-  return `${gun}.${ay}.${yil} ${saat}: ${dakika}: ${saniye}`;
+  return `${gun}. ${ay}.${yil} ${saat}: ${dakika}: ${saniye}`;
 }
 
 /**
@@ -215,10 +223,10 @@ function getISOTimestamp() {
  */
 async function ensureDir(dirPath) {
   try {
-    await fsp.mkdir(dirPath, { recursive: true });
+    await fsp. mkdir(dirPath, { recursive: true });
     return true;
   } catch (err) {
-    await LogYonetim.error('dizin_olusturma_hatasi', `Dizin oluşturulamadı: ${dirPath}`, {
+    await LogYonetim. error('dizin_olusturma_hatasi', `Dizin oluşturulamadı: ${dirPath}`, {
       klasor: 'sistem',
       key: 'dosya',
       hata: err.message,
@@ -229,16 +237,58 @@ async function ensureDir(dirPath) {
   }
 }
 
+/**
+ * Dosyayı güvenli şekilde siler
+ * @param {string} filePath - Dosya yolu
+ * @returns {Promise<boolean>} - Başarılı mı
+ */
+async function safeDeleteFile(filePath) {
+  try {
+    const exists = await fsp. access(filePath).then(() => true).catch(() => false);
+    if (exists) {
+      await fsp.unlink(filePath);
+      await LogYonetim. info('dosya_silindi', `Dosya başarıyla silindi: ${path.basename(filePath)}`, {
+        klasor: 'sistem',
+        key: 'dosya',
+        dosyaYolu: filePath,
+        timestamp: getISOTimestamp()
+      });
+      return true;
+    }
+    return false;
+  } catch (err) {
+    await LogYonetim.error('dosya_silme_hatasi', `Dosya silinemedi: ${err.message}`, {
+      klasor:  'sistem',
+      key: 'dosya',
+      hata: err.message,
+      dosyaYolu: filePath,
+      timestamp: getISOTimestamp()
+    });
+    return false;
+  }
+}
+
+/**
+ * Belirtilen süre sonra dosyayı siler
+ * @param {string} filePath - Dosya yolu
+ * @param {number} delayMs - Gecikme (milisaniye)
+ */
+function scheduleFileDelete(filePath, delayMs = FILE_DELETE_DELAY_MS) {
+  setTimeout(async () => {
+    await safeDeleteFile(filePath);
+  }, delayMs);
+}
+
 // ==================== TC DOĞRULAMA (CHECKSUM DAHİL) ====================
 
 /**
  * Türkiye TC Kimlik Numarası checksum algoritması
  * 
  * Algoritma:
- * 1.İlk 10 hanenin toplamının birler basamağı 11.haneye eşit olmalı
- * 2.Tek pozisyonlardaki (1,3,5,7,9) rakamların toplamının 7 katından
+ * 1. İlk 10 hanenin toplamının birler basamağı 11.  haneye eşit olmalı
+ * 2. Tek pozisyonlardaki (1,3,5,7,9) rakamların toplamının 7 katından
  *    çift pozisyonlardaki (2,4,6,8) rakamların toplamı çıkarılır
- *    Sonucun mod 10'u 10.haneye eşit olmalı
+ *    Sonucun mod 10'u 10.  haneye eşit olmalı
  * 
  * @param {string} tc - TC kimlik numarası
  * @returns {boolean} - Checksum geçerli mi
@@ -250,11 +300,11 @@ function validateTcChecksum(tc) {
 
   const digits = tc.split('').map(Number);
 
-  if (digits.some(isNaN)) {
+  if (digits. some(isNaN)) {
     return false;
   }
 
-  // Kural 1: İlk 10 hanenin toplamının birler basamağı 11.haneye eşit olmalı
+  // Kural 1: İlk 10 hanenin toplamının birler basamağı 11. haneye eşit olmalı
   let sumFirst10 = 0;
   for (let i = 0; i < 10; i++) {
     sumFirst10 += digits[i];
@@ -307,11 +357,11 @@ function validateTc(tc) {
     };
   }
 
-  const trimmedTc = tc.trim();
+  const trimmedTc = tc. trim();
 
   if (trimmedTc.length !== 11) {
     return {
-      valid: false,
+      valid:  false,
       error: 'TC kimlik numarası 11 haneli olmalıdır.',
       errorCode: 'TC_LENGTH'
     };
@@ -325,7 +375,7 @@ function validateTc(tc) {
     };
   }
 
-  if (trimmedTc.charAt(0) === '0') {
+  if (trimmedTc. charAt(0) === '0') {
     return {
       valid: false,
       error: 'TC kimlik numarası 0 ile başlayamaz.',
@@ -336,7 +386,7 @@ function validateTc(tc) {
   if (!validateTcChecksum(trimmedTc)) {
     return {
       valid: false,
-      error: 'TC kimlik numarası geçersiz.Lütfen doğru TC giriniz.',
+      error: 'TC kimlik numarası geçersiz.  Lütfen doğru TC giriniz.',
       errorCode: 'TC_CHECKSUM_INVALID'
     };
   }
@@ -370,27 +420,27 @@ async function getEmbedParameters(usrId, gldId) {
 
   // DM dosyasını kontrol et
   try {
-    const dmFilePath = path.join(DM_VERILER_DIR, `${usrId}.js`);
+    const dmFilePath = path.join(DM_VERILER_DIR, `${usrId}. js`);
 
     if (fs.existsSync(dmFilePath)) {
       delete require.cache[require.resolve(dmFilePath)];
       const dmData = require(dmFilePath);
 
       if (dmData && typeof dmData === 'object') {
-        if (typeof dmData.EMBED_FOOTER === 'string' && dmData.EMBED_FOOTER.length > 0) {
-          params.footer = dmData.EMBED_FOOTER;
+        if (typeof dmData. EMBED_FOOTER === 'string' && dmData. EMBED_FOOTER. length > 0) {
+          params.footer = dmData. EMBED_FOOTER;
         }
-        if (typeof dmData.EMBED_SETIMAGE === 'string' && dmData.EMBED_SETIMAGE.length > 0) {
+        if (typeof dmData.EMBED_SETIMAGE === 'string' && dmData. EMBED_SETIMAGE.length > 0) {
           params.image = dmData.EMBED_SETIMAGE;
         }
-        if (typeof dmData.EMBED_THUMBNAIL === 'string' && dmData.EMBED_THUMBNAIL.length > 0) {
-          params.thumbnail = dmData.EMBED_THUMBNAIL;
+        if (typeof dmData. EMBED_THUMBNAIL === 'string' && dmData.EMBED_THUMBNAIL.length > 0) {
+          params.thumbnail = dmData. EMBED_THUMBNAIL;
         }
-        if (typeof dmData.EMBED_COLOR === 'string' && dmData.EMBED_COLOR.length > 0) {
-          params.color = dmData.EMBED_COLOR;
+        if (typeof dmData.EMBED_COLOR === 'string' && dmData. EMBED_COLOR.length > 0) {
+          params.color = dmData. EMBED_COLOR;
         }
-        if (typeof dmData.EMBED_AUTHOR === 'string' && dmData.EMBED_AUTHOR.length > 0) {
-          params.author = dmData.EMBED_AUTHOR;
+        if (typeof dmData. EMBED_AUTHOR === 'string' && dmData. EMBED_AUTHOR. length > 0) {
+          params. author = dmData. EMBED_AUTHOR;
         }
       }
     }
@@ -407,36 +457,36 @@ async function getEmbedParameters(usrId, gldId) {
   // Sunucu dosyasını kontrol et (override)
   if (gldId) {
     try {
-      const sunucuFilePath = path.join(SUNUCU_VERILER_DIR, `${gldId}.js`);
+      const sunucuFilePath = path.join(SUNUCU_VERILER_DIR, `${gldId}. js`);
 
       if (fs.existsSync(sunucuFilePath)) {
-        delete require.cache[require.resolve(sunucuFilePath)];
+        delete require. cache[require.resolve(sunucuFilePath)];
         const sunucuData = require(sunucuFilePath);
 
         if (sunucuData && typeof sunucuData === 'object') {
-          if (typeof sunucuData.EMBED_FOOTER === 'string' && sunucuData.EMBED_FOOTER.length > 0) {
+          if (typeof sunucuData. EMBED_FOOTER === 'string' && sunucuData. EMBED_FOOTER.length > 0) {
             params.footer = sunucuData.EMBED_FOOTER;
           }
-          if (typeof sunucuData.EMBED_SETIMAGE === 'string' && sunucuData.EMBED_SETIMAGE.length > 0) {
+          if (typeof sunucuData.EMBED_SETIMAGE === 'string' && sunucuData. EMBED_SETIMAGE.length > 0) {
             params.image = sunucuData.EMBED_SETIMAGE;
           }
-          if (typeof sunucuData.EMBED_THUMBNAIL === 'string' && sunucuData.EMBED_THUMBNAIL.length > 0) {
-            params.thumbnail = sunucuData.EMBED_THUMBNAIL;
+          if (typeof sunucuData.EMBED_THUMBNAIL === 'string' && sunucuData. EMBED_THUMBNAIL. length > 0) {
+            params. thumbnail = sunucuData.EMBED_THUMBNAIL;
           }
           if (typeof sunucuData.EMBED_COLOR === 'string' && sunucuData.EMBED_COLOR.length > 0) {
             params.color = sunucuData.EMBED_COLOR;
           }
           if (typeof sunucuData.EMBED_AUTHOR === 'string' && sunucuData.EMBED_AUTHOR.length > 0) {
-            params.author = sunucuData.EMBED_AUTHOR;
+            params.author = sunucuData. EMBED_AUTHOR;
           }
         }
       }
     } catch (err) {
       await LogYonetim.warn('sunucu_config_okuma_hatasi', `Sunucu config okunamadı: ${gldId}`, {
-        klasor: 'panel',
+        klasor:  'panel',
         key: 'sayfa1',
         sunucuID: gldId,
-        hata: err.message,
+        hata: err. message,
         timestamp: getISOTimestamp()
       });
     }
@@ -456,7 +506,7 @@ async function getEmbedParameters(usrId, gldId) {
 function applyEmbedParameters(embed, params) {
   try {
     if (params.footer && typeof params.footer === 'string') {
-      embed.setFooter({ text: params.footer });
+      embed. setFooter({ text: params.footer });
     }
   } catch (err) {
     // Footer hatası, devam
@@ -464,14 +514,14 @@ function applyEmbedParameters(embed, params) {
 
   try {
     if (params.image && typeof params.image === 'string') {
-      embed.setImage(params.image);
+      embed. setImage(params. image);
     }
   } catch (err) {
     // Image hatası, devam
   }
 
   try {
-    if (params.thumbnail && typeof params.thumbnail === 'string') {
+    if (params. thumbnail && typeof params. thumbnail === 'string') {
       embed.setThumbnail(params.thumbnail);
     }
   } catch (err) {
@@ -479,7 +529,7 @@ function applyEmbedParameters(embed, params) {
   }
 
   try {
-    if (params.color && typeof params.color === 'string') {
+    if (params. color && typeof params. color === 'string') {
       embed.setColor(params.color);
     }
   } catch (err) {
@@ -501,13 +551,12 @@ function applyEmbedParameters(embed, params) {
 
 /**
  * Kullanıcı verisini dosya formatına çevirir
+ * NOT: Sistem bilgileri kaldırıldı - sadece kullanıcı verileri
  * @param {object} data - Veritabanından gelen veri
- * @param {string} usrId - Kullanıcı ID
  * @returns {string} - Formatlanmış metin
  */
-function formatUserDataForFile(data, usrId) {
+function formatUserDataForFile(data) {
   const lines = [];
-  const timestamp = formatReadableDate();
 
   lines.push('═══════════════════════════════════════════════════════════');
   lines.push('👤 KULLANICI BİLGİLERİ');
@@ -515,25 +564,12 @@ function formatUserDataForFile(data, usrId) {
   lines.push('');
 
   lines.push(`🆔 TC Kimlik Numarası: ${data.tc || 'N/A'}`);
-  lines.push(`   └─ Güncelleme: ${timestamp}`);
   lines.push('');
 
   lines.push(`👤 Ad: ${data.ad || 'N/A'}`);
-  lines.push(`   └─ Güncelleme:  ${timestamp}`);
   lines.push('');
 
   lines.push(`👥 Soyad: ${data.soyad || 'N/A'}`);
-  lines.push(`   └─ Güncelleme: ${timestamp}`);
-  lines.push('');
-
-  lines.push('───────────────────────────────────────────────────────────');
-  lines.push('⚙️ SİSTEM BİLGİLERİ');
-  lines.push('───────────────────────────────────────────────────────────');
-  lines.push('');
-
-  lines.push(`🔑 Sorgu Yapan Kullanıcı ID: ${usrId}`);
-  lines.push(`📅 Sorgu Tarihi: ${timestamp}`);
-  lines.push(`🗄️ Veri Kaynağı: IO7R Veritabanı`);
   lines.push('');
 
   lines.push('═══════════════════════════════════════════════════════════');
@@ -561,7 +597,7 @@ async function saveResultToFile(usrId, data, gldId, cmdType) {
   try {
     const dirCreated = await ensureDir(COP_TEMIZLIK_DIR);
     if (!dirCreated) {
-      await LogYonetim.error('dosya_olusturulamadi', 'Sonuç klasörü oluşturulamadı', {
+      await LogYonetim. error('dosya_olusturulamadi', 'Sonuç klasörü oluşturulamadı', {
         klasor: 'panel',
         key:  'sayfa1',
         kullaniciID: usrId,
@@ -580,20 +616,21 @@ async function saveResultToFile(usrId, data, gldId, cmdType) {
     const fileName = `${usrId}-${timestamp}.txt`;
     const filePath = path.join(COP_TEMIZLIK_DIR, fileName);
 
-    const formattedData = formatUserDataForFile(data, usrId);
+    // Sistem bilgileri olmadan formatla
+    const formattedData = formatUserDataForFile(data);
 
     const encodeResult = await Base64Sifreleyici.encodeText(formattedData);
 
-    if (! encodeResult || ! encodeResult.success) {
+    if (! encodeResult || !encodeResult.success) {
       const errorMsg = encodeResult ?  encodeResult.message : 'Base64 encode başarısız';
 
       await LogYonetim.error('base64_encode_hatasi', `Base64 encode hatası: ${errorMsg}`, {
         klasor: 'panel',
-        key:  'sayfa1',
+        key: 'sayfa1',
         kullaniciID: usrId,
         guildId: gldId,
         commandType: cmdType,
-        timestamp: getISOTimestamp()
+        timestamp:  getISOTimestamp()
       });
 
       return {
@@ -603,49 +640,46 @@ async function saveResultToFile(usrId, data, gldId, cmdType) {
     }
 
     const readableDate = formatReadableDate();
-    const fileContent = `📌 Bu dosya Base64 ile şifrelenmiştir.
+    const fileContent = `📌 Bu dosya Base64 ile şifrelenmiştir. 
 Çözümleme için: ${BASE64_DECODE_URL}
-Veriler güvenlik ve denetim amaçlı düzenlenmiştir.
 
-════════════════════════════════════════════════════════════════════════════════
+══════════════════════════════════════════════════════════════════
 📅 Dosya Oluşturma Tarihi: ${readableDate}
-🔑 Kullanıcı ID: ${usrId}
-📊 Veri Tipi:  Kullanıcı Sorgusu
-════════════════════════════════════════════════════════════════════════════════
+══════════════════════════════════════════════════════════════════
 
-${encodeResult.data}
+${encodeResult. data}
 
-════════════════════════════════════════════════════════════════════════════════
+══════════════════════════════════════════════════════════════════
 📋 Dosya Sonu
-════════════════════════════════════════════════════════════════════════════════
+══════════════════════════════════════════════════════════════════
 `;
 
     await fsp.writeFile(filePath, fileContent, { encoding: 'utf8' });
 
     await LogYonetim.info('dosya_olusturuldu', `Dosya başarıyla oluşturuldu: ${fileName}`, {
       klasor: 'panel',
-      key: 'sayfa1',
+      key:  'sayfa1',
       kullaniciID: usrId,
       guildId: gldId,
       commandType: cmdType,
-      dosyaAdi:  fileName,
+      dosyaAdi: fileName,
       dosyaYolu: filePath,
       timestamp: getISOTimestamp()
     });
 
     return {
-      success:  true,
+      success: true,
       filePath: filePath,
-      fileName: fileName
+      fileName:  fileName
     };
 
   } catch (err) {
-    await LogYonetim.error('dosya_olusturulamadi', `Dosya kaydetme hatası:  ${err.message}`, {
-      klasor: 'panel',
-      key:  'sayfa1',
+    await LogYonetim.error('dosya_olusturulamadi', `Dosya kaydetme hatası: ${err.message}`, {
+      klasor:  'panel',
+      key: 'sayfa1',
       kullaniciID: usrId,
       guildId: gldId,
-      commandType: cmdType,
+      commandType:  cmdType,
       hata: err.message,
       stack: err.stack,
       timestamp: getISOTimestamp()
@@ -672,9 +706,9 @@ async function createProcessingEmbed(usrId, gldId) {
   let embed = new EmbedBuilder()
     .setColor(PROCESSING_EMBED_COLOR)
     .setTitle('⏳ İşlem Yapılıyor')
-    .setDescription('İşleme başlandı, lütfen bekleyiniz...\n\nVeriler güvenli şekilde toplanıyor ve şifreleniyor.')
+    .setDescription('İşleme başlandı, lütfen bekleyiniz.. .\n\nVeriler güvenli şekilde toplanıyor ve şifreleniyor.')
     .addFields(
-      { name: '📊 Durum', value: '```Veritabanı sorgulanıyor...```', inline: false },
+      { name: '📊 Durum', value: '```Veritabanı sorgulanıyor... ```', inline: false },
       { name: '🔐 Güvenlik', value: '```Base64 şifreleme aktif```', inline: true },
       { name: '⏱️ Başlangıç', value: `\`${formatTimestamp()}\``, inline: true }
     )
@@ -683,10 +717,10 @@ async function createProcessingEmbed(usrId, gldId) {
   embed = applyEmbedParameters(embed, params);
 
   if (! params.footer) {
-    embed.setFooter({ text: 'Lütfen bekleyiniz...' });
+    embed. setFooter({ text:  'Lütfen bekleyiniz.. .' });
   }
 
-  await LogYonetim.info('embed_hazirlandi', 'Processing embed hazırlandı', {
+  await LogYonetim. info('embed_hazirlandi', 'Processing embed hazırlandı', {
     klasor: 'panel',
     key: 'sayfa1',
     kullaniciID: usrId,
@@ -716,7 +750,7 @@ async function createSuccessEmbed(usrId, gldId, data, fileName) {
     .setTitle('✅ İşlem Başarılı!')
     .setDescription('Sorgu işleminiz başarıyla tamamlandı.\nSonuç dosyası hazır 🎉')
     .addFields(
-      { name: '🆔 TC', value:  `\`\`\`${data.tc || 'N/A'}\`\`\``, inline: true },
+      { name: '🆔 TC', value: `\`\`\`${data.tc || 'N/A'}\`\`\``, inline: true },
       { name: '👤 Ad', value: `\`\`\`${data.ad || 'N/A'}\`\`\``, inline: true },
       { name: '👥 Soyad', value: `\`\`\`${data.soyad || 'N/A'}\`\`\``, inline: true },
       { name:  '📁 Dosya', value: `\`${fileName}\``, inline: false },
@@ -726,7 +760,7 @@ async function createSuccessEmbed(usrId, gldId, data, fileName) {
 
   embed = applyEmbedParameters(embed, params);
 
-  if (!params.footer) {
+  if (!params. footer) {
     embed.setFooter({ text: 'Dosyayı almak için aşağıdaki butonlardan birini seçin' });
   }
 
@@ -759,7 +793,7 @@ async function createErrorEmbed(usrId, gldId, errorMessage, errorCode) {
     .setDescription('İşlem sırasında bir hata oluştu.\nLütfen daha sonra tekrar deneyiniz.')
     .addFields(
       { name: '❗ Hata', value: `\`\`\`${errorMessage}\`\`\``, inline: false },
-      { name: '🔢 Hata Kodu', value:  `\`${errorCode || 'UNKNOWN'}\``, inline: true },
+      { name: '🔢 Hata Kodu', value: `\`${errorCode || 'UNKNOWN'}\``, inline: true },
       { name: '⏱️ Zaman', value: `\`${formatTimestamp()}\``, inline: true }
     )
     .setTimestamp();
@@ -772,7 +806,7 @@ async function createErrorEmbed(usrId, gldId, errorMessage, errorCode) {
 
   await LogYonetim.info('embed_hazirlandi', 'Error embed hazırlandı', {
     klasor: 'panel',
-    key: 'sayfa1',
+    key:  'sayfa1',
     kullaniciID: usrId,
     guildId: gldId,
     embedTip: 'error',
@@ -799,7 +833,7 @@ async function createSentEmbed(usrId, gldId, destination, fileName) {
   let embed = new EmbedBuilder()
     .setColor(SUCCESS_EMBED_COLOR)
     .setTitle('✅ Gönderim Başarılı!')
-    .setDescription(`İşleminiz tamamlandı.\nDosya başarıyla **${destText}** üzerine gönderildi.`)
+    .setDescription(`İşleminiz tamamlandı.\nDosya başarıyla **${destText}** üzerine gönderildi. `)
     .addFields(
       { name: '📁 Dosya', value: `\`${fileName}\``, inline: true },
       { name: '📤 Gönderim', value: `\`${destText}\``, inline: true },
@@ -809,13 +843,13 @@ async function createSentEmbed(usrId, gldId, destination, fileName) {
 
   embed = applyEmbedParameters(embed, params);
 
-  if (!params.footer) {
+  if (!params. footer) {
     embed.setFooter({ text: 'İşlem tamamlandı' });
   }
 
   await LogYonetim.info('embed_hazirlandi', 'Sent embed hazırlandı', {
-    klasor:  'panel',
-    key: 'sayfa1',
+    klasor: 'panel',
+    key:  'sayfa1',
     kullaniciID: usrId,
     guildId: gldId,
     embedTip: 'sent',
@@ -850,7 +884,7 @@ async function createNotFoundEmbed(usrId, gldId) {
     embed.setFooter({ text: 'Farklı bir TC numarası deneyin' });
   }
 
-  await LogYonetim.info('embed_hazirlandi', 'NotFound embed hazırlandı', {
+  await LogYonetim. info('embed_hazirlandi', 'NotFound embed hazırlandı', {
     klasor: 'panel',
     key: 'sayfa1',
     kullaniciID: usrId,
@@ -877,7 +911,7 @@ function createDeliveryButtons() {
   const channelButton = new ButtonBuilder()
     .setCustomId('sayfa1_send_channel')
     .setLabel('📢 Bu Kanala Gönder')
-    .setStyle(ButtonStyle.Secondary);
+    .setStyle(ButtonStyle. Secondary);
 
   return new ActionRowBuilder().addComponents(dmButton, channelButton);
 }
@@ -961,7 +995,7 @@ function setPendingResult(usrId, resultData) {
   }, PENDING_RESULT_TIMEOUT_MS);
 
   pendingResults.set(usrId, {
-    ...resultData,
+    ... resultData,
     timerId:  timerId,
     timestamp: Date.now()
   });
@@ -982,7 +1016,7 @@ module.exports = {
    * Sayfa adını döndürür
    * @returns {Promise<string>} - Sayfa adı
    */
-  getPageName:  async function() {
+  getPageName: async function() {
     return 'IO7R Sorgulaması';
   },
 
@@ -1025,7 +1059,7 @@ module.exports = {
    * Sorgu modalını döndürür
    * @returns {Promise<ModalBuilder>} - Modal
    */
-  getQueryModal:  async function() {
+  getQueryModal: async function() {
     const modal = new ModalBuilder()
       .setCustomId('sayfa_1_sorgu_modal')
       .setTitle('IO7R TC Sorgu');
@@ -1033,7 +1067,7 @@ module.exports = {
     const tcInput = new TextInputBuilder()
       .setCustomId('io7r_tc')
       .setLabel('TC Kimlik Numarası')
-      .setStyle(TextInputStyle.Short)
+      .setStyle(TextInputStyle. Short)
       .setPlaceholder('11 haneli TC numaranızı girin')
       .setRequired(true)
       .setMinLength(11)
@@ -1050,7 +1084,7 @@ module.exports = {
    * @param {Interaction} interaction - Discord etkileşimi
    * @param {object} context - Bağlam nesnesi
    */
-  handleQueryModal:  async function(interaction, context) {
+  handleQueryModal: async function(interaction, context) {
     const { db, safeReply, traceId, userId, state } = context;
     const gldId = (state && state.guildId) ? state.guildId : interaction.guildId;
     const cmdType = (state && state.commandType) ? state.commandType : 'ucretsiz';
@@ -1060,10 +1094,10 @@ module.exports = {
 
     try {
       // ========== API İSTEĞİ BAŞLATILDI ==========
-      await LogYonetim. info('api_istegi_baslatildi', 'IO7R sorgu isteği başlatıldı', {
+      await LogYonetim.info('api_istegi_baslatildi', 'IO7R sorgu isteği başlatıldı', {
         klasor: 'panel',
         key: 'sayfa1',
-        kullaniciID: userId,
+        kullaniciID:  userId,
         guildId: gldId,
         commandType: cmdType,
         traceID: traceId,
@@ -1078,10 +1112,10 @@ module.exports = {
         await LogYonetim.error('tc_deger_alinamadi', 'TC kimlik numarası modal\'dan alınamadı', {
           klasor: 'panel',
           key: 'sayfa1',
-          kullaniciID: userId,
+          kullaniciID:  userId,
           guildId: gldId,
           commandType: cmdType,
-          traceID:  traceId,
+          traceID: traceId,
           hata: fieldErr. message,
           timestamp: getISOTimestamp()
         });
@@ -1108,7 +1142,7 @@ module.exports = {
       const validation = validateTc(tc);
 
       if (! validation.valid) {
-        await LogYonetim.warn('tc_validasyon_hatasi', `TC validasyon hatası:  ${validation.error}`, {
+        await LogYonetim.warn('tc_validasyon_hatasi', `TC validasyon hatası: ${validation.error}`, {
           klasor: 'panel',
           key: 'sayfa1',
           kullaniciID: userId,
@@ -1128,10 +1162,10 @@ module.exports = {
         );
 
         // Interaction durumunu kontrol et
-        if (!interaction. replied && !interaction. deferred) {
+        if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
         } else if (interaction.deferred) {
-          await interaction.editReply({ embeds: [errorEmbed], components: [] });
+          await interaction. editReply({ embeds: [errorEmbed], components: [] });
         }
         return;
       }
@@ -1154,9 +1188,9 @@ module.exports = {
 
       // ========== İŞLEM EMBED'İNİ GÖSTER ==========
       const processingEmbed = await createProcessingEmbed(userId, gldId);
-      
+
       // İlk yanıtı ver veya defer et
-      if (! interaction.replied && ! interaction.deferred) {
+      if (!interaction.replied && !interaction.deferred) {
         await interaction. deferReply({ ephemeral: true });
       }
       interactionHandled = true;
@@ -1168,7 +1202,7 @@ module.exports = {
       const dbInstance = db || DbManager;
 
       if (! dbInstance || dbInstance.isDisabled) {
-        await LogYonetim.error('db_bulunamadi', 'Veritabanı bağlantısı kullanılamıyor', {
+        await LogYonetim. error('db_bulunamadi', 'Veritabanı bağlantısı kullanılamıyor', {
           klasor: 'database',
           key:  'sorgu',
           kullaniciID: userId,
@@ -1194,20 +1228,21 @@ module.exports = {
       const startTime = Date.now();
 
       await LogYonetim.info('db_sorgu_baslatildi', 'Veritabanı sorgusu başlatıldı', {
-        klasor: 'database',
+        klasor:  'database',
         key: 'sorgu',
-        kullaniciID: userId,
+        kullaniciID:  userId,
         guildId: gldId,
-        commandType:  cmdType,
+        commandType: cmdType,
         traceID: traceId,
         tcMaskeli: tcMaskeli,
         tcEncrypted: tcEncrypted,
         timeoutMs: DB_TIMEOUT_MS,
-        timestamp: getISOTimestamp()
+        timestamp:  getISOTimestamp()
       });
 
       try {
-        const sql = 'SELECT tc, ad, soyad FROM io7r WHERE tc = ?  LIMIT 1';
+        // Çapraz veritabanı sorgusu:  io7r. io7r
+        const sql = `SELECT tc, ad, soyad FROM ${IO7R_FULL_TABLE} WHERE tc = ?  LIMIT 1`;
 
         results = await dbInstance. query('main', sql, [tc], {
           queue: true,
@@ -1218,10 +1253,10 @@ module.exports = {
         const duration = Date.now() - startTime;
 
         await LogYonetim.info('db_sonucu', 'Veritabanı sorgusu tamamlandı', {
-          klasor: 'database',
-          key:  'sorgu',
-          kullaniciID: userId,
-          guildId:  gldId,
+          klasor:  'database',
+          key: 'sorgu',
+          kullaniciID:  userId,
+          guildId: gldId,
           commandType: cmdType,
           traceID: traceId,
           sure: duration,
@@ -1239,11 +1274,11 @@ module.exports = {
         if (isTimeout) {
           await LogYonetim.error('db_timeout', `Veritabanı timeout: ${duration}ms`, {
             klasor: 'database',
-            key:  'sorgu',
+            key: 'sorgu',
             kullaniciID: userId,
-            guildId:  gldId,
+            guildId: gldId,
             commandType: cmdType,
-            traceID: traceId,
+            traceID:  traceId,
             sure: duration,
             timeoutMs: DB_TIMEOUT_MS,
             timestamp: getISOTimestamp()
@@ -1277,7 +1312,7 @@ module.exports = {
 
       // ========== SONUÇ BULUNAMADI ==========
       if (! results || results.length === 0) {
-        await LogYonetim.info('db_bulunamadi', `Sonuç bulunamadı: ${tcMaskeli}`, {
+        await LogYonetim.info('db_bulunamadi', `Sonuç bulunamadı:  ${tcMaskeli}`, {
           klasor: 'database',
           key: 'sorgu',
           kullaniciID: userId,
@@ -1285,7 +1320,7 @@ module.exports = {
           commandType: cmdType,
           traceID: traceId,
           tcMaskeli: tcMaskeli,
-          tcEncrypted:  tcEncrypted,
+          tcEncrypted: tcEncrypted,
           timestamp: getISOTimestamp()
         });
 
@@ -1316,7 +1351,7 @@ module.exports = {
         const errorEmbed = await createErrorEmbed(
           userId,
           gldId,
-          'Sonuç dosyası oluşturulurken hata oluştu. Lütfen tekrar deneyin.',
+          'Sonuç dosyası oluşturulurken hata oluştu.  Lütfen tekrar deneyin.',
           'FILE_SAVE_ERROR'
         );
 
@@ -1339,32 +1374,32 @@ module.exports = {
       const deliveryButtons = createDeliveryButtons();
 
       await interaction.editReply({
-        embeds:  [successEmbed],
+        embeds: [successEmbed],
         components: [deliveryButtons]
       });
 
       await LogYonetim.info('sorgu_tamamlandi', `IO7R sorgusu başarıyla tamamlandı:  ${tcMaskeli}`, {
         klasor: 'database',
-        key: 'sorgu',
+        key:  'sorgu',
         kullaniciID: userId,
-        guildId: gldId,
-        commandType:  cmdType,
+        guildId:  gldId,
+        commandType: cmdType,
         traceID: traceId,
-        dosyaAdi: saveResult. fileName,
+        dosyaAdi: saveResult.fileName,
         tcMaskeli: tcMaskeli,
         tcEncrypted: tcEncrypted,
         timestamp:  getISOTimestamp()
       });
 
     } catch (err) {
-      await LogYonetim.error('hata', `IO7R kritik hata: ${err.message}`, {
+      await LogYonetim.error('hata', `IO7R kritik hata:  ${err.message}`, {
         klasor: 'panel',
         key:  'sayfa1',
-        kullaniciID:  userId,
+        kullaniciID: userId,
         guildId: gldId,
-        commandType: cmdType,
+        commandType:  cmdType,
         traceID: traceId,
-        hata:  err.message,
+        hata: err. message,
         stack: err.stack,
         timestamp: getISOTimestamp()
       });
@@ -1411,7 +1446,7 @@ module.exports = {
 
     try {
       // ========== BUTON TIKLAMA LOG ==========
-      await LogYonetim.info('buton_tiklama', `Buton tıklandı: ${buttonId}`, {
+      await LogYonetim. info('buton_tiklama', `Buton tıklandı: ${buttonId}`, {
         klasor: 'panel',
         key: 'sayfa1',
         kullaniciID: userId,
@@ -1421,7 +1456,7 @@ module.exports = {
         timestamp: getISOTimestamp()
       });
 
-      // ========== PENDING RESULT KONTROLÜ ==========
+            // ========== PENDING RESULT KONTROLÜ ==========
       const pending = pendingResults.get(userId);
 
       if (! pending) {
@@ -1442,7 +1477,7 @@ module.exports = {
           'SESSION_EXPIRED'
         );
 
-        await interaction.reply({ embeds: [errorEmbed], flags:  MessageFlags.Ephemeral });
+        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags. Ephemeral });
         return;
       }
 
@@ -1450,7 +1485,7 @@ module.exports = {
 
       // ========== DOSYA VARLIK KONTROLÜ ==========
       if (!fs.existsSync(filePath)) {
-        await LogYonetim.error('dosya_bulunamadi', `Sonuç dosyası bulunamadı: ${fileName}`, {
+        await LogYonetim. error('dosya_bulunamadi', `Sonuç dosyası bulunamadı:  ${fileName}`, {
           klasor: 'panel',
           key: 'sayfa1',
           kullaniciID: userId,
@@ -1467,17 +1502,17 @@ module.exports = {
           'FILE_NOT_FOUND'
         );
 
-        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags. Ephemeral });
         clearPendingResult(userId);
         return;
       }
 
-            // ========== DM'YE GÖNDER ==========
+      // ========== DM'YE GÖNDER ==========
       if (buttonId === 'sayfa1_send_dm') {
-        await LogYonetim.info('dm_gonderim_denendi', 'DM gönderim denemesi başlatıldı', {
-          klasor: 'panel',
+        await LogYonetim. info('dm_gonderim_denendi', 'DM gönderim denemesi başlatıldı', {
+          klasor:  'panel',
           key: 'sayfa1',
-          kullaniciID:  userId,
+          kullaniciID: userId,
           guildId: gldId,
           commandType: commandType,
           traceID: traceId,
@@ -1521,6 +1556,21 @@ module.exports = {
           // Pending result temizle
           clearPendingResult(userId);
 
+          // DM başarılı gönderildikten 2 saniye sonra dosyayı sil
+          scheduleFileDelete(filePath, FILE_DELETE_DELAY_MS);
+
+          await LogYonetim. info('dosya_silme_zamanlandi', `Dosya ${FILE_DELETE_DELAY_MS}ms sonra silinecek:  ${fileName}`, {
+            klasor:  'panel',
+            key: 'sayfa1',
+            kullaniciID: userId,
+            guildId: gldId,
+            commandType: commandType,
+            traceID: traceId,
+            dosyaAdi: fileName,
+            silmeGecikmesi: FILE_DELETE_DELAY_MS,
+            timestamp: getISOTimestamp()
+          });
+
         } catch (dmError) {
           // DM kapalı veya gönderim hatası
           const isDmClosed = dmError.code === 50007 ||
@@ -1530,11 +1580,11 @@ module.exports = {
             klasor: 'panel',
             key: 'sayfa1',
             kullaniciID: userId,
-            guildId:  gldId,
+            guildId: gldId,
             commandType: commandType,
-            traceID: traceId,
+            traceID:  traceId,
             dmKapali: isDmClosed,
-            hata: dmError.message,
+            hata: dmError. message,
             timestamp: getISOTimestamp()
           });
 
@@ -1542,25 +1592,25 @@ module.exports = {
             userId,
             gldId,
             isDmClosed
-              ? 'DM gönderilemedi.DM\'lerinizin açık olduğundan emin olun.'
+              ? 'DM gönderilemedi.  DM\'lerinizin açık olduğundan emin olun.'
               : 'DM gönderimi sırasında bir hata oluştu.',
             'DM_SEND_ERROR'
           );
 
-          await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+          await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags. Ephemeral });
         }
       }
 
       // ========== KANALA GÖNDER ==========
       else if (buttonId === 'sayfa1_send_channel') {
-        await LogYonetim.info('kanal_gonderim_baslatildi', 'Kanal gönderimi başlatıldı', {
+        await LogYonetim. info('kanal_gonderim_baslatildi', 'Kanal gönderimi başlatıldı', {
           klasor: 'panel',
           key: 'sayfa1',
           kullaniciID: userId,
           guildId: gldId,
           commandType: commandType,
           traceID:  traceId,
-          dosyaAdi:  fileName,
+          dosyaAdi: fileName,
           timestamp: getISOTimestamp()
         });
 
@@ -1572,21 +1622,21 @@ module.exports = {
           }
 
           // ========== YETKİ KONTROLÜ ==========
-          const botMember = interaction.guild?.members?.me;
+          const botMember = interaction.guild?. members?. me;
 
           if (botMember && typeof channel.permissionsFor === 'function') {
             const permissions = channel.permissionsFor(botMember);
 
-            const canSendMessages = permissions?.has(PermissionFlagsBits.SendMessages);
-            const canAttachFiles = permissions?.has(PermissionFlagsBits.AttachFiles);
+            const canSendMessages = permissions?. has(PermissionFlagsBits.SendMessages);
+            const canAttachFiles = permissions?. has(PermissionFlagsBits. AttachFiles);
 
             if (!canSendMessages || !canAttachFiles) {
               await LogYonetim.warn('kanal_yetki_eksik', 'Bot\'un kanala mesaj/dosya gönderme yetkisi yok', {
-                klasor: 'panel',
-                key:  'sayfa1',
+                klasor:  'panel',
+                key: 'sayfa1',
                 kullaniciID: userId,
                 guildId: gldId,
-                commandType:  commandType,
+                commandType: commandType,
                 traceID: traceId,
                 kanalId: channel.id,
                 canSendMessages: canSendMessages,
@@ -1601,7 +1651,7 @@ module.exports = {
                 'PERMISSION_ERROR'
               );
 
-              await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+              await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags. Ephemeral });
               return;
             }
           }
@@ -1627,20 +1677,22 @@ module.exports = {
             components: [disabledButtons]
           });
 
-          await LogYonetim.info('kanal_gonderim_basarili', `Dosya kanala gönderildi: ${fileName}`, {
-            klasor: 'panel',
+          await LogYonetim.info('kanal_gonderim_basarili', `Dosya kanala gönderildi:  ${fileName}`, {
+            klasor:  'panel',
             key: 'sayfa1',
             kullaniciID: userId,
-            guildId:  gldId,
+            guildId: gldId,
             commandType: commandType,
             traceID: traceId,
-            kanalId: channel.id,
+            kanalId: channel. id,
             dosyaAdi:  fileName,
             timestamp: getISOTimestamp()
           });
 
           // Pending result temizle
           clearPendingResult(userId);
+
+          // NOT:  Kanala gönderimde dosya silinmez, sadece DM'de silinir
 
         } catch (channelError) {
           await LogYonetim.error('kanal_gonderim_hatasi', `Kanal gönderim hatası: ${channelError.message}`, {
@@ -1657,7 +1709,7 @@ module.exports = {
           const errorEmbed = await createErrorEmbed(
             userId,
             gldId,
-            'Kanala gönderilemedi.Bot\'un bu kanala mesaj gönderme yetkisi olmayabilir.',
+            'Kanala gönderilemedi.  Bot\'un bu kanala mesaj gönderme yetkisi olmayabilir.',
             'CHANNEL_SEND_ERROR'
           );
 
@@ -1773,7 +1825,19 @@ module.exports = {
    * @param {string|null} gldId - Sunucu ID
    * @returns {Promise<object>} - Embed parametreleri
    */
-  getEmbedParameters: getEmbedParameters
-};
+  getEmbedParameters: getEmbedParameters,
 
-// Maskeleme logic'i ENV'e göre kontrol edilir şekilde eklendi.VIP/Premium ve Ücretsiz maskelenme desteklenir.
+  /**
+   * Dosyayı güvenli şekilde siler
+   * @param {string} filePath - Dosya yolu
+   * @returns {Promise<boolean>} - Başarılı mı
+   */
+  safeDeleteFile: safeDeleteFile,
+
+  /**
+   * Zamanlı dosya silme
+   * @param {string} filePath - Dosya yolu
+   * @param {number} delayMs - Gecikme (ms)
+   */
+  scheduleFileDelete: scheduleFileDelete
+};
