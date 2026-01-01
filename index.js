@@ -27,41 +27,97 @@ const { Routes } = require('discord-api-types/v10');
 // ==================== SABİTLER VE YOLLAR ====================
 
 const BASE_DIR = process.cwd();
+
+// Rütbe sistemi dizinleri (rutbe/ altında)
 const RUTBE_DIR = path.join(BASE_DIR, 'rutbe');
 const VIP_DIR = path.join(RUTBE_DIR, 'vip');
 const PREMIUM_DIR = path.join(RUTBE_DIR, 'premium');
-const VIP_KOMUT_DIR = path.join(VIP_DIR, 'komut');
+const VIP_KOMUT_DIR = path. join(VIP_DIR, 'komut');
 const VIP_SAYFA_DIR = path.join(VIP_DIR, 'sayfa');
 const PREMIUM_KOMUT_DIR = path.join(PREMIUM_DIR, 'komut');
 const PREMIUM_SAYFA_DIR = path.join(PREMIUM_DIR, 'sayfa');
-const VIP_YETKILI_FILE = path.join(VIP_DIR, 'yetkili_kisiler.js');
-const PREMIUM_YETKILI_FILE = path.join(PREMIUM_DIR, 'yetkili_kisiler.js');
 
-const SUNUCU_DM_VERILER_DIR = path.join(BASE_DIR, 'sunucu_dm_veriler');
+// Yetkili dosyaları (JSON formatında)
+const VIP_YETKILI_FILE = path.join(VIP_DIR, 'vip_yetkili_kisiler.json');
+const PREMIUM_YETKILI_FILE = path.join(PREMIUM_DIR, 'premium_yetkili_kisiler.json');
+
+// Sunucu ve DM veri dizinleri
+const SUNUCU_DM_VERILER_DIR = path. join(BASE_DIR, 'sunucu_dm_veriler');
 const SUNUCU_VERILER_DIR = path.join(SUNUCU_DM_VERILER_DIR, 'sunucu');
-const DM_VERILER_DIR = path.join(SUNUCU_DM_VERILER_DIR, 'dm');
+const DM_VERILER_DIR = path. join(SUNUCU_DM_VERILER_DIR, 'dm');
 
+// Komut dizinleri (sadece ücretsiz ve owner)
 const UCRETSIZ_KOMUTLAR_DIR = path.join(BASE_DIR, 'ucretsiz_komutlar');
-const OWNER_KOMUT_DIR = path.join(BASE_DIR, 'owner_komutlar');
-const VIP_KOMUTLAR_DIR = path.join(BASE_DIR, 'vip_komutlar');
-const PREMIUM_KOMUTLAR_DIR = path.join(BASE_DIR, 'premium_komutlar');
+const OWNER_KOMUT_DIR = path. join(BASE_DIR, 'owner_komutlar');
 
+// Sayfa ve state dizinleri
 const STATELER_DIR = path.join(BASE_DIR, 'stateler');
 const SAYFALAR_DIR = path.join(BASE_DIR, 'sayfalar');
+
+// Log ve cache dizinleri
 const LOGLAR_ROOT = path.join(BASE_DIR, 'loglar');
-const CACHE_DIR = path.join(BASE_DIR, '.cache');
-const ADMINLER_DOSYA = path.join(BASE_DIR, 'adminler.json');
-const COMMAND_SIGNATURE_FILE = path.join(CACHE_DIR, 'command_signature.json');
-const ODA_VERILERI_DIR = path.join(BASE_DIR, 'oda_verileri');
+const CACHE_DIR = path. join(BASE_DIR, '. cache');
+
+// Geçici dosya dizini (sorgu sonuçları için)
+const COP_TEMIZLIK_DIR = path.join(BASE_DIR, 'cop_temizlik');
+
+// Diğer dosyalar
+const ADMINLER_DOSYA = path.join(BASE_DIR, 'adminler. json');
+const COMMAND_SIGNATURE_FILE = path. join(CACHE_DIR, 'command_signature.json');
+
+// NOT:  vip_komutlar, premium_komutlar ve oda_verileri klasörleri KALDIRILDI
+// VIP/Premium komutları rutbe/ altından yüklenir
+// Oda verileri veritabanında tutulur
 
 // ==================== ENV DEĞİŞKENLERİ (DEFAULT FALLBACK İLE) ====================
 
 const TOKEN = process.env.TOKEN || '';
-const CLIENT_ID = process.env.CLIENT_ID || '';
+const CLIENT_ID = process. env.CLIENT_ID || '';
 const BOT_OWNER_ID = process.env.BOT_OWNER_ID || null;
-const PANEL_DEAKTIF_SANIYE = Math.max(10, Number(process.env.PANEL_DEAKTIF_SANIYE || 120));
-const SUNUCU_GUNCELLEME_ARALIK = Math.max(60000, Number(process.env.SUNUCU_GUNCELLEME_ARALIK_MS || 86400000));
-const ERROR_WEBHOOK_URL = process.env.ERROR_WEBHOOK_URL || '';
+const PANEL_DEAKTIF_SANIYE = Math.max(10, Number(process.env. PANEL_DEAKTIF_SANIYE || 120));
+const SUNUCU_GUNCELLEME_ARALIK = Math.max(60000, Number(process. env.SUNUCU_GUNCELLEME_ARALIK_MS || 86400000));
+const ERROR_WEBHOOK_URL = process. env.ERROR_WEBHOOK_URL || '';
+const FILE_DELETE_DELAY_MS = Math.max(1000, Number(process.env.FILE_DELETE_DELAY_MS || 2000));
+
+// ==================== KOMUT DM/SUNUCU AYARLARI ====================
+
+/**
+ * ENV'den komut context ayarlarını okur
+ * Varsayılan: Her ikisi de aktif (1)
+ */
+function getCommandContextSettings() {
+  const dmAktifRaw = process.env. KOMUTLAR_DM_AKTIF;
+  const sunucuAktifRaw = process.env.KOMUTLAR_SUNUCU_AKTIF;
+
+  const dmAktif = dmAktifRaw === undefined || dmAktifRaw === null || dmAktifRaw === ''
+    ? true
+    : (dmAktifRaw === '1' || dmAktifRaw. toLowerCase() === 'true');
+
+  const sunucuAktif = sunucuAktifRaw === undefined || sunucuAktifRaw === null || sunucuAktifRaw === ''
+    ? true
+    : (sunucuAktifRaw === '1' || sunucuAktifRaw.toLowerCase() === 'true');
+
+  const contexts = [];
+  if (sunucuAktif) contexts.push(0);
+  if (dmAktif) {
+    contexts.push(1);
+    contexts.push(2);
+  }
+
+  const integrationTypes = [];
+  if (sunucuAktif) integrationTypes.push(0);
+  if (dmAktif) integrationTypes.push(1);
+
+  return {
+    dmAktif,
+    sunucuAktif,
+    contexts,
+    integrationTypes,
+    dmPermission: dmAktif
+  };
+}
+
+const COMMAND_CONTEXT_SETTINGS = getCommandContextSettings();
 
 // ==================== ENV MASK PARAMETRELERİ - GERÇEK ZAMANLI TAKİP ====================
 
@@ -130,6 +186,51 @@ function isCommandMasked(commandType) {
       return getEnvMaskValue('ucretsiz');
   }
 }
+
+// ==================== KOMUT DM/SUNUCU AYARLARI ====================
+
+/**
+ * ENV'den komut context ayarlarını okur
+ * Varsayılan: Her ikisi de aktif (1)
+ * @returns {object} - {dmAktif, sunucuAktif, contexts, integrationTypes, dmPermission}
+ */
+function getCommandContextSettings() {
+  const dmAktifRaw = process.env. KOMUTLAR_DM_AKTIF;
+  const sunucuAktifRaw = process.env. KOMUTLAR_SUNUCU_AKTIF;
+
+  // Normalize et - undefined/null/boş ise varsayılan true (1)
+  const dmAktif = dmAktifRaw === undefined || dmAktifRaw === null || dmAktifRaw === ''
+    ? true
+    : (dmAktifRaw === '1' || dmAktifRaw. toLowerCase() === 'true');
+
+  const sunucuAktif = sunucuAktifRaw === undefined || sunucuAktifRaw === null || sunucuAktifRaw === ''
+    ? true
+    : (sunucuAktifRaw === '1' || sunucuAktifRaw.toLowerCase() === 'true');
+
+  // Discord API contexts:  0 = Guild, 1 = BotDM, 2 = PrivateChannel (Group DM)
+  const contexts = [];
+  if (sunucuAktif) contexts.push(0);
+  if (dmAktif) {
+    contexts.push(1);
+    contexts.push(2);
+  }
+
+  // Integration types: 0 = GuildInstall, 1 = UserInstall
+  const integrationTypes = [];
+  if (sunucuAktif) integrationTypes.push(0);
+  if (dmAktif) integrationTypes.push(1);
+
+  return {
+    dmAktif,
+    sunucuAktif,
+    contexts,
+    integrationTypes,
+    dmPermission: dmAktif
+  };
+}
+
+// Global komut context ayarları (bir kez hesapla)
+const COMMAND_CONTEXT_SETTINGS = getCommandContextSettings();
 
 // ==================== CACHE SİSTEMLERİ ====================
 
@@ -588,6 +689,7 @@ function validateEnv() {
 
 async function ensureDirs() {
   const dirs = [
+    // Log dizinleri
     LOGLAR_ROOT,
     path.join(LOGLAR_ROOT, 'sunucular'),
     path.join(LOGLAR_ROOT, 'dm'),
@@ -595,13 +697,19 @@ async function ensureDirs() {
     path.join(LOGLAR_ROOT, 'database'),
     path.join(LOGLAR_ROOT, 'panel'),
     path.join(LOGLAR_ROOT, 'log_kalici_arsiv'),
+    
+    // Cache
     CACHE_DIR,
+    
+    // Komut dizinleri
     UCRETSIZ_KOMUTLAR_DIR,
     OWNER_KOMUT_DIR,
-    VIP_KOMUTLAR_DIR,
-    PREMIUM_KOMUTLAR_DIR,
+    
+    // State ve sayfa
     STATELER_DIR,
     SAYFALAR_DIR,
+    
+    // Rütbe sistemi
     RUTBE_DIR,
     VIP_DIR,
     PREMIUM_DIR,
@@ -609,10 +717,14 @@ async function ensureDirs() {
     VIP_SAYFA_DIR,
     PREMIUM_KOMUT_DIR,
     PREMIUM_SAYFA_DIR,
+    
+    // Sunucu/DM verileri
     SUNUCU_DM_VERILER_DIR,
     SUNUCU_VERILER_DIR,
     DM_VERILER_DIR,
-    ODA_VERILERI_DIR
+    
+    // Geçici dosyalar
+    COP_TEMIZLIK_DIR
   ];
 
   for (const dir of dirs) {
@@ -667,25 +779,35 @@ async function ensureDirs() {
     key: 'startup'
   });
 }
-
+/**
+ * Yetkili JSON dosyalarını oluşturur (yoksa)
+ */
 async function ensureYetkiliFiles() {
-  const defaultYetkiliContent = `// yetkili_kisiler.js
-// Kullanıcı ID'lerini diziye ekleyin
-
-module.exports = {
-  yetkiliKullanicilar: [],
-  sonGuncelleme: '${new Date().toISOString()}'
-};
-`;
-
-  try {
-    if (!fs.existsSync(VIP_YETKILI_FILE)) {
-      await fsp.mkdir(VIP_DIR, { recursive: true });
-      await fsp.writeFile(VIP_YETKILI_FILE, defaultYetkiliContent, 'utf8');
+  const files = [
+    {
+      path: VIP_YETKILI_FILE,
+      dir: VIP_DIR,
+      content:  { vip_uyeler: [] }
+    },
+    {
+      path: PREMIUM_YETKILI_FILE,
+      dir: PREMIUM_DIR,
+      content: { premium_uyeler: [] }
     }
-  } catch (e) {
-    // Sessizce devam et
+  ];
+
+  for (const file of files) {
+    try {
+      await fsp.mkdir(file.dir, { recursive: true });
+
+      if (! fs.existsSync(file.path)) {
+        await fsp.writeFile(file.path, JSON.stringify(file. content, null, 2), 'utf8');
+      }
+    } catch (e) {
+      // Sessizce devam et
+    }
   }
+}
 
   try {
     if (!fs.existsSync(PREMIUM_YETKILI_FILE)) {
@@ -756,39 +878,50 @@ function stopYetkiFileWatchers() {
     adminFileWatcher = null;
   }
 }
-
+/**
+ * Yetkili kullanıcıları JSON dosyasından okur ve cache'e alır
+ * @param {string} rutbeTipi - 'vip' veya 'premium'
+ * @returns {string[]} - Yetkili kullanıcı ID'leri
+ */
 function refreshYetkiliCache(rutbeTipi) {
   const cache = yetkiCache[rutbeTipi];
   if (! cache) return [];
 
   const now = Date.now();
-  
+
   if (cache.data.length > 0 && (now - cache.lastUpdate) < cache.ttl) {
-    return cache.data;
+    return cache. data;
+  }
+
+  let filePath;
+  let jsonKey;
+
+  if (rutbeTipi === 'vip') {
+    filePath = VIP_YETKILI_FILE;
+    jsonKey = 'vip_uyeler';
+  } else if (rutbeTipi === 'premium') {
+    filePath = PREMIUM_YETKILI_FILE;
+    jsonKey = 'premium_uyeler';
+  } else {
+    return [];
   }
 
   try {
-    const filePath = rutbeTipi === 'vip' ? VIP_YETKILI_FILE : PREMIUM_YETKILI_FILE;
-    
-    if (! fs.existsSync(filePath)) {
+    if (!fs.existsSync(filePath)) {
       cache.data = [];
       cache.lastUpdate = now;
       return [];
     }
 
-    delete require.cache[require.resolve(filePath)];
-    const data = require(filePath);
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    const jsonData = JSON.parse(fileContent);
 
-    if (Array.isArray(data.yetkiliKullanicilar)) {
-      cache.data = data.yetkiliKullanicilar;
-    } else if (Array.isArray(data)) {
-      cache.data = data;
-    } else {
-      cache.data = [];
-    }
+    const kullanicilar = Array.isArray(jsonData[jsonKey]) ? jsonData[jsonKey] : [];
 
+    cache.data = kullanicilar;
     cache.lastUpdate = now;
-    return cache.data;
+    return kullanicilar;
+
   } catch (e) {
     cache.data = [];
     cache.lastUpdate = now;
@@ -891,18 +1024,19 @@ async function hasPermission(userId, level = 'user') {
 
 function getSunucuConfig(guildId) {
   const now = Date.now();
-  const cached = sunucuConfigCache.get(guildId);
+  const cached = sunucuConfigCache. get(guildId);
 
   if (cached && (now - cached.lastUpdate) < CONFIG_CACHE_TTL) {
     return cached.config;
   }
 
   const defaultConfig = {
-    ODA_AC_KOMUTLAR_ZORUNLU: false,
+    KOMUTLAR_ICIN_ODA_AC_ZORUNLU: false,
     ODA_AC_KANAL_IDLERI: [],
-    ODA_AC_KATEGORI_ID: null,
+    ODA_AC_KATEGORI_ID:  null,
     ODALARIN_OLDUGU_KATEGORI_ID: null,
-    EMBED_FOOTER: null,
+    ODA_KAPANMA_VARSAYILAN_SANIYE: 300,
+    EMBED_FOOTER:  null,
     EMBED_SETIMAGE: null,
     EMBED_COLOR: null,
     EMBED_THUMBNAIL: null,
@@ -910,32 +1044,34 @@ function getSunucuConfig(guildId) {
   };
 
   try {
-    const configPath = path.join(SUNUCU_VERILER_DIR, `${guildId}.js`);
-    
-    if (!fs.existsSync(configPath)) {
-      sunucuConfigCache.set(guildId, { config: defaultConfig, lastUpdate: now });
+    const configPath = path.join(SUNUCU_VERILER_DIR, `${guildId}.json`);
+
+    if (!fs. existsSync(configPath)) {
+      sunucuConfigCache.set(guildId, { config:  defaultConfig, lastUpdate: now });
       return defaultConfig;
     }
 
-    delete require.cache[require.resolve(configPath)];
-    const data = require(configPath);
+    const fileContent = fs.readFileSync(configPath, 'utf8');
+    const data = JSON.parse(fileContent);
 
     const config = {
-      ODA_AC_KOMUTLAR_ZORUNLU: data.ODA_AC_KOMUTLAR_ZORUNLU === true || data.ODA_AC_KOMUTLAR_ZORUNLU === 1 || data.ODA_AC_KOMUTLAR_ZORUNLU === '1',
-      ODA_AC_KANAL_IDLERI: Array.isArray(data.ODA_AC_KANAL_IDLERI) ? data.ODA_AC_KANAL_IDLERI.slice(0, 10) : [],
+      KOMUTLAR_ICIN_ODA_AC_ZORUNLU: data.KOMUTLAR_ICIN_ODA_AC_ZORUNLU === true || data.KOMUTLAR_ICIN_ODA_AC_ZORUNLU === 1 || data.KOMUTLAR_ICIN_ODA_AC_ZORUNLU === '1',
+      ODA_AC_KANAL_IDLERI: Array.isArray(data.ODA_AC_KANAL_IDLERI) ? data.ODA_AC_KANAL_IDLERI : 
+                           (typeof data.ODA_AC_KANAL_IDLERI === 'string' ? data.ODA_AC_KANAL_IDLERI. split(',').filter(id => id.trim()) : []),
       ODA_AC_KATEGORI_ID: data.ODA_AC_KATEGORI_ID || null,
-      ODALARIN_OLDUGU_KATEGORI_ID: data.ODALARIN_OLDUGU_KATEGORI_ID || null,
-      EMBED_FOOTER:  data.EMBED_FOOTER || null,
+      ODALARIN_OLDUGU_KATEGORI_ID: data. ODALARIN_OLDUGU_KATEGORI_ID || null,
+      ODA_KAPANMA_VARSAYILAN_SANIYE: Number(data.ODA_KAPANMA_VARSAYILAN_SANIYE) || 300,
+      EMBED_FOOTER: data. EMBED_FOOTER || null,
       EMBED_SETIMAGE: data.EMBED_SETIMAGE || null,
       EMBED_COLOR: data.EMBED_COLOR || null,
       EMBED_THUMBNAIL: data.EMBED_THUMBNAIL || null,
       LOG_KANAL_ID: data.LOG_KANAL_ID || data.log_kanal_id || null
     };
 
-    sunucuConfigCache.set(guildId, { config, lastUpdate: now });
+    sunucuConfigCache.set(guildId, { config, lastUpdate:  now });
     return config;
   } catch (e) {
-    sunucuConfigCache.set(guildId, { config: defaultConfig, lastUpdate:  now });
+    sunucuConfigCache. set(guildId, { config: defaultConfig, lastUpdate:  now });
     return defaultConfig;
   }
 }
@@ -1273,18 +1409,23 @@ async function safeRestPut(route, body, retryCount = 0) {
 }
 
 async function registerAndLoadCommands() {
-  const ucretsizStats = await loadCommandsFrom(UCRETSIZ_KOMUTLAR_DIR, client.commands);
+  // Ücretsiz komutları yükle
+  const ucretsizStats = await loadCommandsFrom(UCRETSIZ_KOMUTLAR_DIR, client. commands);
+  
+  // Owner komutlarını yükle
   const ownerStats = await loadCommandsFrom(OWNER_KOMUT_DIR, client.ownerCommands, 'owner');
-  const vipRutbeStats = await loadCommandsFrom(VIP_KOMUT_DIR, client.vipCommands, 'vip');
-  const vipStats = await loadCommandsFrom(VIP_KOMUTLAR_DIR, client.vipCommands, 'vip');
-  const premiumRutbeStats = await loadCommandsFrom(PREMIUM_KOMUT_DIR, client.premiumCommands, 'premium');
-  const premiumStats = await loadCommandsFrom(PREMIUM_KOMUTLAR_DIR, client.premiumCommands, 'premium');
+  
+  // VIP komutlarını yükle (rutbe/vip/komut/)
+  const vipStats = await loadCommandsFrom(VIP_KOMUT_DIR, client.vipCommands, 'vip');
+  
+  // Premium komutlarını yükle (rutbe/premium/komut/)
+  const premiumStats = await loadCommandsFrom(PREMIUM_KOMUT_DIR, client.premiumCommands, 'premium');
 
-  // Çakışmaları çöz
-  for (const name of client.ownerCommands.keys()) {
-    if (client.commands.has(name)) client.commands.delete(name);
-    if (client.vipCommands.has(name)) client.vipCommands.delete(name);
-    if (client.premiumCommands.has(name)) client.premiumCommands.delete(name);
+  // Çakışmaları çöz - Owner en yüksek öncelik
+  for (const name of client.ownerCommands. keys()) {
+    if (client.commands. has(name)) client.commands.delete(name);
+    if (client.vipCommands.has(name)) client.vipCommands. delete(name);
+    if (client. premiumCommands. has(name)) client.premiumCommands.delete(name);
   }
 
   if (! CLIENT_ID || !rest) {
@@ -1312,20 +1453,29 @@ async function registerAndLoadCommands() {
       client.commands,
       client.ownerCommands,
       client.vipCommands,
-      client.premiumCommands
+      client. premiumCommands
     ];
 
     for (const cmdMap of commandMaps) {
       for (const cmd of cmdMap.values()) {
-        if (cmd.data && ! processedNames.has(cmd.data.name)) {
-          const cmdData = typeof cmd.data.toJSON === 'function' ? cmd.data.toJSON() : cmd.data;
+        if (cmd.data && !processedNames. has(cmd.data.name)) {
+          let cmdData = typeof cmd.data. toJSON === 'function' ? cmd.data.toJSON() : { ...cmd.data };
+
+          // DM ve Sunucu context ayarlarını ekle
+          cmdData.contexts = COMMAND_CONTEXT_SETTINGS.contexts;
+          cmdData.integration_types = COMMAND_CONTEXT_SETTINGS.integrationTypes;
+
+          if (COMMAND_CONTEXT_SETTINGS.dmPermission !== undefined) {
+            cmdData.dm_permission = COMMAND_CONTEXT_SETTINGS.dmPermission;
+          }
+
           const sig = getCommandSignature(cmdData);
-          
+
           currentSignatures[cmd.data.name] = sig;
           allCommands.push(cmdData);
           processedNames.add(cmd.data.name);
 
-          if (! previousSignatures[cmd.data.name]) {
+          if (!previousSignatures[cmd. data.name]) {
             added++;
           } else if (previousSignatures[cmd.data.name] !== sig) {
             changed++;
@@ -1345,14 +1495,16 @@ async function registerAndLoadCommands() {
     if (needsUpdate) {
       await safeRestPut(Routes.applicationCommands(CLIENT_ID), allCommands);
       await saveCommandSignatures(currentSignatures);
-      
+
       await SafeLog.info('commands_registered', 'Komutlar güncellendi', {
         klasor:  'bot_genel',
         key: 'startup',
         toplam: Object.keys(currentSignatures).length,
         degisen: changed,
         eklenen: added,
-        silinen: deleted
+        silinen: deleted,
+        dmAktif:  COMMAND_CONTEXT_SETTINGS.dmAktif,
+        sunucuAktif: COMMAND_CONTEXT_SETTINGS. sunucuAktif
       });
     } else {
       await SafeLog.info('commands_uptodate', 'Komutlar güncel', {
@@ -1363,7 +1515,7 @@ async function registerAndLoadCommands() {
 
     return { total: Object.keys(currentSignatures).length, changed, added, deleted };
   } catch (e) {
-    await SafeLog.error('command_register_error', `Komut register hatası: ${e.message}`, {
+    await SafeLog.error('command_register_error', `Komut register hatası: ${e. message}`, {
       klasor: 'bot_genel',
       key:  'startup'
     });
@@ -1637,6 +1789,126 @@ async function updateStateStatus(userId, stateDir, newStatus) {
   } catch (e) {
     return false;
   }
+}
+
+// ==================== ODA KISITLAMA SİSTEMİ ====================
+
+/**
+ * Kullanıcının açık odası var mı kontrol eder
+ * @param {string} userId - Kullanıcı ID
+ * @param {string} guildId - Sunucu ID
+ * @returns {Promise<{hasRoom: boolean, roomData: object|null}>}
+ */
+async function checkUserHasActiveRoom(userId, guildId) {
+  if (!dbConnected || !dbManager) {
+    return { hasRoom: false, roomData: null };
+  }
+
+  try {
+    const sql = `
+      SELECT * FROM kanal_geri_sayim 
+      WHERE kullanici_id = ? 
+      AND sunucu_id = ?  
+      AND durum = 'aktif'
+      LIMIT 1
+    `;
+
+    const results = await dbManager. query('main', sql, [userId, guildId], { queue: true });
+
+    if (results && results.length > 0) {
+      return { hasRoom: true, roomData: results[0] };
+    }
+
+    return { hasRoom: false, roomData: null };
+  } catch (e) {
+    return { hasRoom: false, roomData: null };
+  }
+}
+
+/**
+ * Kanalın oda açma kanalı olup olmadığını kontrol eder
+ * @param {string} guildId - Sunucu ID
+ * @param {string} channelId - Kanal ID
+ * @returns {boolean}
+ */
+function isOdaAcmaKanali(guildId, channelId) {
+  const config = getSunucuConfig(guildId);
+
+  if (!config.ODA_AC_KANAL_IDLERI || config.ODA_AC_KANAL_IDLERI.length === 0) {
+    return false;
+  }
+
+  return config.ODA_AC_KANAL_IDLERI.includes(channelId);
+}
+
+/**
+ * Komutun oda dışında kullanılıp kullanılamayacağını kontrol eder
+ * @param {Interaction} interaction - Discord etkileşimi
+ * @param {string} commandName - Komut adı
+ * @returns {Promise<{allowed: boolean, embed: EmbedBuilder|null}>}
+ */
+async function checkOdaRestriction(interaction, commandName) {
+  const guildId = interaction. guildId;
+  const channelId = interaction.channelId;
+  const userId = interaction.user.id;
+
+  // DM'de oda kısıtlaması yok
+  if (! guildId) {
+    return { allowed: true, embed: null };
+  }
+
+  // Bazı komutlar her zaman kullanılabilir
+  const exemptCommands = ['oda', 'kurulum', 'yardim', 'help'];
+  if (exemptCommands.includes(commandName. toLowerCase())) {
+    return { allowed:  true, embed: null };
+  }
+
+  // Sunucu config'den zorunluluğu kontrol et
+  const config = getSunucuConfig(guildId);
+
+  if (!config. KOMUTLAR_ICIN_ODA_AC_ZORUNLU) {
+    return { allowed: true, embed: null };
+  }
+
+  // Oda açma kanallarında her zaman kullanılabilir
+  if (isOdaAcmaKanali(guildId, channelId)) {
+    return { allowed: true, embed: null };
+  }
+
+  // Kullanıcının aktif odası var mı kontrol et
+  const { hasRoom, roomData } = await checkUserHasActiveRoom(userId, guildId);
+
+  if (!hasRoom) {
+    return {
+      allowed: false,
+      embed:  createErrorEmbed(
+        '🚪 Oda Gerekli',
+        'Bu komutu kullanabilmek için önce bir **oda açmanız** gerekiyor.\n\n' +
+        '📍 Oda açmak için `/oda` komutunu kullanabilirsiniz.\n' +
+        '💡 Oda açtıktan sonra bu komutu kullanabilirsiniz.',
+        null,
+        guildId,
+        userId
+      )
+    };
+  }
+
+  // Kullanıcı kendi odasında mı kontrol et
+  if (roomData && roomData.acilan_oda_id !== channelId) {
+    return {
+      allowed: false,
+      embed: createErrorEmbed(
+        '📍 Yanlış Kanal',
+        'Bu komutu sadece **kendi odanızda** kullanabilirsiniz.\n\n' +
+        `🚪 Odanız:  <#${roomData.acilan_oda_id}>`,
+        null,
+        guildId,
+        userId
+      )
+    };
+  }
+
+  return { allowed: true, embed: null };
 }
 
 // ==================== ODA GERİ SAYIM SİSTEMİ ====================
@@ -1986,7 +2258,7 @@ async function handleSlashCommand(interaction, traceId) {
         'Bu komut mevcut değil veya yüklenemedi.',
         traceId, guildId, userId
       );
-      await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+      await interaction.reply({ embeds: [embed], flags: MessageFlags. Ephemeral });
       return;
     }
 
@@ -2001,27 +2273,20 @@ async function handleSlashCommand(interaction, traceId) {
       return;
     }
 
-    // Kanal kısıtlaması kontrolü
-    if (! checkChannelRestriction(interaction, commandName)) {
-      const config = getSunucuConfig(guildId);
-      const izinliKanallar = config.ODA_AC_KANAL_IDLERI.length > 0
-        ? config.ODA_AC_KANAL_IDLERI.map(id => `<#${id}>`).join(', ')
-        : 'Belirlenmemiş';
+    // Oda kısıtlama kontrolü (sunucuda ise)
+    if (guildId) {
+      const odaCheck = await checkOdaRestriction(interaction, commandName);
 
-      const embed = createErrorEmbed(
-        '🚫 Kanal Kısıtlaması',
-        `Bu komut bu kanalda kullanılamaz.\n\n**İzin Verilen Kanallar:**\n${izinliKanallar}`,
-        traceId, guildId, userId
-      );
-
-      await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
-      return;
+      if (!odaCheck.allowed) {
+        await interaction.reply({ embeds: [odaCheck.embed], flags: MessageFlags. Ephemeral });
+        return;
+      }
     }
 
     // ZORUNLU:  Her zaman defer yap (skipDefer yoksa)
     if (! cmd.skipDefer) {
       try {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction. deferReply({ flags: MessageFlags. Ephemeral });
       } catch (deferErr) {
         await SafeLog.warn('defer_failed', `Defer başarısız: ${deferErr.message}`, {
           klasor: 'bot_genel',
@@ -2042,7 +2307,7 @@ async function handleSlashCommand(interaction, traceId) {
     } else if (type === 'premium' || cmd.rutbeTipi === 'premium') {
       requiredPermission = 'premium';
     } else if (cmd.permission) {
-      requiredPermission = cmd.permission;
+      requiredPermission = cmd. permission;
     }
 
     if (!await checkPermission(interaction, requiredPermission)) {
@@ -2052,19 +2317,22 @@ async function handleSlashCommand(interaction, traceId) {
     // Komutu çalıştır
     await cmd.execute(interaction, {
       client,
-      db: dbManager,
+      db:  dbManager,
       dbConnected,
-      LogYonetim: SafeLog,
+      LogYonetim:  SafeLog,
       traceId,
       PANEL_DEAKTIF_SANIYE,
       STATELER_DIR,
       SAYFALAR_DIR,
+      COP_TEMIZLIK_DIR,
+      FILE_DELETE_DELAY_MS,
       getSunucuConfig,
       getEmbedParameters,
       applyEmbedParameters,
       createOdaRecord,
       startOdaGeriSayim,
       closeOdaRecord,
+      checkUserHasActiveRoom,
       isVipUser,
       isPremiumUser,
       getUserRutbe,
@@ -2089,9 +2357,9 @@ async function handleSlashCommand(interaction, traceId) {
     await SafeLog.kullaniciKomut(userId, commandName, guildId, traceId);
 
   } catch (e) {
-    await SafeLog.error('command_error', `Komut hatası:  ${commandName}`, {
+    await SafeLog.error('command_error', `Komut hatası: ${commandName}`, {
       klasor: 'bot_genel',
-      key: 'command',
+      key:  'command',
       hata: e.message,
       traceID: traceId,
       kullaniciID: userId
@@ -2100,21 +2368,20 @@ async function handleSlashCommand(interaction, traceId) {
     try {
       const errorEmbed = createErrorEmbed(
         '❌ Bir Hata Oluştu',
-        'Komut çalıştırılırken beklenmeyen bir sorun oluştu.Lütfen daha sonra tekrar deneyin.',
+        'Komut çalıştırılırken beklenmeyen bir sorun oluştu.  Lütfen daha sonra tekrar deneyin.',
         traceId, guildId, userId
       );
 
       if (interaction.replied || interaction.deferred) {
         await interaction.editReply({ embeds: [errorEmbed] });
       } else {
-        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags.Ephemeral });
+        await interaction.reply({ embeds: [errorEmbed], flags: MessageFlags. Ephemeral });
       }
     } catch (replyErr) {
       // Yanıt verilemedi
     }
   }
 }
-
 async function handleButton(interaction, traceId) {
   const buttonId = interaction.customId;
   const userId = interaction.user.id;
@@ -3308,70 +3575,81 @@ async function getSystemStats() {
 async function startBot() {
   const startTime = Date.now();
 
-  await SafeLog.info('bot_starting', 'Bot başlatılıyor...', {
+  await SafeLog. info('bot_starting', 'Bot başlatılıyor... ', {
     klasor: 'bot_genel',
     key: 'startup'
   });
 
-  // 1.ENV Doğrulama
+  // 1. ENV Doğrulama
   const envResult = validateEnv();
-  if (!envResult.valid) {
-    await SafeLog.critical('env_invalid', 'ENV doğrulaması başarısız - Bot başlatılamıyor', {
+  if (!envResult. valid) {
+    await SafeLog. critical('env_invalid', 'ENV doğrulaması başarısız - Bot başlatılamıyor', {
       klasor: 'bot_genel',
       key: 'startup',
-      errors: envResult.errors.join('; ')
+      errors: envResult. errors.join('; ')
     });
     process.exit(1);
   }
 
-  // 2.Dizinleri oluştur
+  // 2. Dizinleri oluştur
   await ensureDirs();
 
-  // 3.Veritabanını başlat
+  // 3. Veritabanını başlat
   await initializeDatabase();
 
-  // 4.Komutları yükle ve register et
+  // 4. Komutları yükle ve register et
   const commandResult = await registerAndLoadCommands();
   if (commandResult) {
     await SafeLog.info('commands_loaded', 'Komutlar yüklendi', {
       klasor: 'bot_genel',
       key: 'startup',
-      toplam: commandResult.total,
+      toplam: commandResult. total,
       eklenen: commandResult.added,
       degisen: commandResult.changed,
       silinen: commandResult.deleted
     });
   }
 
-  // 5.Yetki sistemini kontrol et
+  // 5. Yetki sistemini kontrol et
   const vipUsers = getYetkiliKullanicilar('vip');
   const premiumUsers = getYetkiliKullanicilar('premium');
   await SafeLog.info('yetki_loaded', 'Yetki sistemi yüklendi', {
     klasor: 'bot_genel',
     key: 'startup',
-    vipSayisi: vipUsers.length,
-    premiumSayisi: premiumUsers.length,
+    vipSayisi: vipUsers. length,
+    premiumSayisi:  premiumUsers.length,
     ownerID: BOT_OWNER_ID || 'Tanımsız'
   });
 
-  // 6.ENV mask durumlarını logla
+  // 6. ENV mask durumlarını logla
   await SafeLog.info('env_mask_status', 'ENV mask parametreleri', {
     klasor: 'bot_genel',
-    key: 'startup',
+    key:  'startup',
     ucretsizMask: getEnvMaskValue('ucretsiz'),
     vipMask: getEnvMaskValue('vip'),
     premiumMask: getEnvMaskValue('premium')
   });
 
-  // 7.Discord'a bağlan
+  /  // 7. Komut context ayarlarını logla
+  await SafeLog.info('command_context_status', 'Komut context ayarları', {
+    klasor: 'bot_genel',
+    key: 'startup',
+    dmAktif:  COMMAND_CONTEXT_SETTINGS.dmAktif,
+    sunucuAktif: COMMAND_CONTEXT_SETTINGS. sunucuAktif,
+    contexts: COMMAND_CONTEXT_SETTINGS. contexts,
+    integrationTypes: COMMAND_CONTEXT_SETTINGS.integrationTypes
+  });
+
+
+  // 8. Discord'a bağlan
   try {
     await client.login(TOKEN);
     
     const loadTime = Date.now() - startTime;
-    await SafeLog.success('bot_started', `Bot başarıyla başlatıldı (${loadTime}ms)`, {
+    await SafeLog. success('bot_started', `Bot başarıyla başlatıldı (${loadTime}ms)`, {
       klasor: 'bot_genel',
       key: 'startup',
-      sure: loadTime
+      sure:  loadTime
     });
   } catch (loginErr) {
     await SafeLog.critical('login_failed', `Discord login başarısız:  ${loginErr.message}`, {
@@ -3504,6 +3782,14 @@ module.exports = {
   ADMINLER_DOSYA,
   COMMAND_SIGNATURE_FILE,
   ENV_MASK_CHECK_INTERVAL,
+  
+  // Yeni exportlar
+  COP_TEMIZLIK_DIR,
+  FILE_DELETE_DELAY_MS,
+  COMMAND_CONTEXT_SETTINGS,
+  checkUserHasActiveRoom,
+  checkOdaRestriction,
+  isOdaAcmaKanali,
   
   // Cache referansları (read-only için getter)
   get yetkiCache() { return yetkiCache; },
