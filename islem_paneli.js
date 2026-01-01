@@ -1799,7 +1799,12 @@ module.exports = {
           const modal = sayfaSecimModalOlustur(toplamSayfa);
 
           try {
-            await interaction.showModal(modal);
+            if (! interaction.replied && ! interaction.deferred) {
+  await interaction.showModal(modal);
+} else {
+  // Modal gösterilemez, kullanıcıya bilgi ver
+  console.log('[PANEL] Modal gösterilemedi - interaction zaten yanıtlanmış');
+}
           } catch (modalHatasi) {
             console.error('[PANEL] Modal gösterme hatası:', modalHatasi.message);
 
