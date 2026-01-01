@@ -1369,14 +1369,16 @@ module.exports = {
         commandType: cmdType
       });
 
-      // ========== BAŞARI EMBED VE BUTONLARI GÖSTER ==========
-      const successEmbed = await createSuccessEmbed(userId, gldId, kayit, saveResult.fileName);
-      const deliveryButtons = createDeliveryButtons();
+      // Başarı embed'i oluştur ve YENİ MESAJ olarak gönder (panel mesajını ezme)
+const successEmbed = await createSuccessEmbed(userId, gldId, kayit, saveResult.fileName);
+const buttons = createDeliveryButtons();
 
-      await interaction.editReply({
-        embeds: [successEmbed],
-        components: [deliveryButtons]
-      });
+// followUp ile yeni mesaj gönder - panel timer bu mesajı etkilemez
+await interaction.followUp({
+  embeds:  [successEmbed],
+  components: [buttons],
+  ephemeral: true  // Herkes görebilsin veya true yaparak sadece kullanıcı görsün
+});
 
       await LogYonetim.info('sorgu_tamamlandi', `IO7R sorgusu başarıyla tamamlandı:  ${tcMaskeli}`, {
         klasor: 'database',
